@@ -1,0 +1,8 @@
+/result
+/result-*
+/.direnv
+/.pre-commit-config.yaml
+/build/
+/compile_commands.json
+/.cache/
+/__cmake_systeminformation/
