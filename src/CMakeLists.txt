@@ -1,5 +1,6 @@
 add_library(moba_sim_core
     core/greeting.cpp
+    events/event.cpp
 )
 
 target_include_directories(moba_sim_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
