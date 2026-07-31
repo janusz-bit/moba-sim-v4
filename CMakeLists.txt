@@ -14,7 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(MOBA_SIM_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
-# Wspólne flagi ostrzeżeń dla wszystkich targetów
+# Shared warning flags for all targets
 add_library(project_warnings INTERFACE)
 target_compile_options(project_warnings INTERFACE
     -Wall

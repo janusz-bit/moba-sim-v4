@@ -6,24 +6,24 @@
 namespace moba_sim {
 
 void process_event(const Event& event, std::ostream& debug_out) {
-    // C++23: lambda używa `self` (deducing this) do rekurencyjnego
-    // przetworzenia pod-zdarzeń
+    // C++23: the lambda uses `self` (deducing this) to recursively
+    // process sub-events
     std::visit(
         [&debug_out](this auto self, const auto& e) -> void {
             using T = std::decay_t<decltype(e)>;
 
             if constexpr (std::is_same_v<T, PlayerDiedEvent>) {
-                debug_out << "Gracz zginął: " << e.name << "\n";
+                debug_out << "Player died: " << e.name << "\n";
             } else if constexpr (std::is_same_v<T, KeyPressedEvent>) {
-                debug_out << "Klawisz: " << e.key << "\n";
+                debug_out << "Key pressed: " << e.key << "\n";
             } else if constexpr (std::is_same_v<T, std::shared_ptr<EventSequence>>) {
-                debug_out << "--- Początek Sekwencji Zdarzeń ---\n";
+                debug_out << "--- Begin Event Sequence ---\n";
                 for (const auto& sub_event : e->events) {
-                    // REKURENCJA! Przekazujemy 'self' (czyli tę samą lambdę)
-                    // do kolejnego visit
+                    // RECURSION! We pass 'self' (i.e. this very lambda)
+                    // to the next visit
                     std::visit(self, sub_event);
                 }
-                debug_out << "--- Koniec Sekwencji ---\n";
+                debug_out << "--- End Event Sequence ---\n";
             }
         },
         event);

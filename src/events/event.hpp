@@ -16,11 +16,11 @@ struct KeyPressedEvent {
     int key;
 };
 
-// Zdarzenie zbiorcze: zawiera wektor innych zdarzeń!
+// Aggregate event: contains a vector of other events!
 struct EventSequence;
 
 using Event = std::variant<PlayerDiedEvent, KeyPressedEvent,
-                           std::shared_ptr<EventSequence> // Zagnieżdżenie!
+                           std::shared_ptr<EventSequence> // Nesting!
                            >;
 
 struct EventSequence {
@@ -29,8 +29,8 @@ struct EventSequence {
 
 namespace detail {
 
-/// Strumień "null" — ignoruje wszystkie zapisy (badbit => no-op).
-/// Dzięki temu debug output jest domyślnie wyłączony.
+/// "Null" stream — discards all writes (badbit => no-op).
+/// This keeps the debug output disabled by default.
 inline std::ostream& null_stream() {
     static std::ostream stream{nullptr};
     return stream;
@@ -38,8 +38,8 @@ inline std::ostream& null_stream() {
 
 } // namespace detail
 
-// Bez podania strumienia funkcja jest cicha; podaj np. std::cout / std::cerr,
-// aby włączyć wypisywanie zdarzeń (debug).
+// Without a stream argument the function stays silent; pass e.g.
+// std::cout / std::cerr to enable event printing (debug).
 void process_event(const Event& event, std::ostream& debug_out = detail::null_stream());
 
 } // namespace moba_sim
