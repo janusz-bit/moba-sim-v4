@@ -2,19 +2,13 @@
 
 #include <memory>
 #include <ostream>
-#include <string>
 #include <variant>
 #include <vector>
 
+#include "events/key_pressed_event.hpp"
+#include "events/player_died_event.hpp"
+
 namespace moba_sim {
-
-struct PlayerDiedEvent {
-    std::string name;
-};
-
-struct KeyPressedEvent {
-    int key;
-};
 
 // Aggregate event: contains a vector of other events!
 struct EventSequence;
@@ -38,6 +32,7 @@ inline std::ostream& null_stream() {
 
 } // namespace detail
 
+// Dispatches the event to the matching handle_event overload.
 // Without a stream argument the function stays silent; pass e.g.
 // std::cout / std::cerr to enable event printing (debug).
 void process_event(const Event& event, std::ostream& debug_out = detail::null_stream());
