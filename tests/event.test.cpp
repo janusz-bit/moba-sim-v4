@@ -20,30 +20,30 @@ TEST_CASE("process_event handles KeyPressedEvent", "[events]") {
 }
 
 TEST_CASE("process_event without a stream is silent and safe", "[events]") {
-    auto seq = std::make_shared<EventSequence>();
+    auto seq = std::make_unique<EventSequence>();
     seq->events.push_back(KeyPressedEvent{32});
     // Default null stream: no output, no exceptions
-    REQUIRE_NOTHROW(process_event(Event{seq}));
+    REQUIRE_NOTHROW(process_event(Event{std::move(seq)}));
 }
 
 TEST_CASE("process_event handles an empty sequence", "[events]") {
     std::ostringstream out;
-    process_event(Event{std::make_shared<EventSequence>()}, out);
+    process_event(Event{std::make_unique<EventSequence>()}, out);
     REQUIRE(out.str() == "--- Begin Event Sequence ---\n"
                          "--- End Event Sequence ---\n");
 }
 
 TEST_CASE("process_event handles nested sequences recursively", "[events]") {
-    auto inner = std::make_shared<EventSequence>();
+    auto inner = std::make_unique<EventSequence>();
     inner->events.push_back(KeyPressedEvent{32});
 
-    auto outer = std::make_shared<EventSequence>();
+    auto outer = std::make_unique<EventSequence>();
     outer->events.push_back(PlayerDiedEvent{"Anna"});
-    outer->events.push_back(Event{inner});
+    outer->events.push_back(Event{std::move(inner)});
     outer->events.push_back(KeyPressedEvent{13});
 
     std::ostringstream out;
-    process_event(Event{outer}, out);
+    process_event(Event{std::move(outer)}, out);
 
     REQUIRE(out.str() == "--- Begin Event Sequence ---\n"
                          "Player died: Anna\n"

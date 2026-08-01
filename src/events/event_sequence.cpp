@@ -6,7 +6,7 @@
 
 namespace moba_sim {
 
-void handle_event(const std::shared_ptr<EventSequence>& sequence, std::ostream& debug_out) {
+void handle_event(const std::unique_ptr<EventSequence>& sequence, std::ostream& debug_out) {
     debug_out << "--- Begin Event Sequence ---\n";
     for (const auto& sub_event : sequence->events) {
         // Recursion: sub-events go through the main dispatcher again
