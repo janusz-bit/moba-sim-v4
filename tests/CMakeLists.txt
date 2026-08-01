@@ -1,6 +1,7 @@
 find_package(Catch2 3 REQUIRED)
 
 add_executable(moba_sim_tests
+    champion.test.cpp
     event.test.cpp
     greeting.test.cpp
 )
