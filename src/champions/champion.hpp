@@ -4,16 +4,6 @@
 
 namespace moba_sim {
 
-// Legacy champion classes from the LoL wiki
-enum class Role {
-    Assassin,
-    Fighter,
-    Mage,
-    Marksman,
-    Support,
-    Tank,
-};
-
 // Resource bar used by the champion's abilities
 enum class ResourceType {
     None,
@@ -33,7 +23,6 @@ enum class RangeType {
 struct Champion {
     std::string name;
 
-    Role role = Role::Fighter;
     ResourceType resource_type = ResourceType::Mana;
     RangeType range_type = RangeType::Melee;
 
