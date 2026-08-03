@@ -2,7 +2,7 @@
 
 namespace moba_sim {
 
-void StatPipeline::add(Modifier modifier) { modifiers_.push_back(modifier); }
+void StatPipeline::add(const Modifier& modifier) { modifiers_.push_back(modifier); }
 
 const std::vector<Modifier>& StatPipeline::modifiers() const { return modifiers_; }
 
