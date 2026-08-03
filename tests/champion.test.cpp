@@ -123,9 +123,9 @@ TEST_CASE("Champion accepts Inc/More modifiers on top of seeded base", "[champio
 
     // Level 6 AD: 53 + 3 * 5 = 68. Add +10 AD (Base), +20% Inc, +10% More.
     Champion champ(ahri, 6);
-    champ.pipeline(StatId::AttackDamage).add({ModifierKind::Base, 10});
-    champ.pipeline(StatId::AttackDamage).add({ModifierKind::Inc, 0.2});
-    champ.pipeline(StatId::AttackDamage).add({ModifierKind::More, 0.1});
+    champ.pipeline(StatId::AttackDamage).add_base(10);
+    champ.pipeline(StatId::AttackDamage).add_inc(0.2);
+    champ.pipeline(StatId::AttackDamage).add_more(0.1);
 
     // (68 + 10) * (1 + 0.2) * (1 + 0.1) = 78 * 1.2 * 1.1 = 102.96
     REQUIRE_THAT(champ.compute(StatId::AttackDamage), Catch::Matchers::WithinAbs(102.96, 1e-9));

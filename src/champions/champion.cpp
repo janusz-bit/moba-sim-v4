@@ -38,6 +38,28 @@ constexpr StatSpec spec_for(StatId stat) {
 
 } // namespace
 
+namespace {
+
+void apply_modifier(StatPipeline& pipe, const ItemModifier& mod) {
+    switch (mod.kind) {
+    case ModifierKind::Base:
+        pipe.add_base(mod.value);
+        break;
+    case ModifierKind::Inc:
+        pipe.add_inc(mod.value);
+        break;
+    case ModifierKind::More:
+        pipe.add_more(mod.value);
+        break;
+    }
+}
+
+void seed_pipeline(StatPipeline& pipe, const ChampionData& data, StatId stat, int level) {
+    pipe.add_base(data.base_value(stat, level));
+}
+
+} // namespace
+
 double ChampionData::base_value(StatId stat, int level) const {
     const auto [base_ptr, growth_ptr] = spec_for(stat);
     if (base_ptr == nullptr) {
@@ -50,16 +72,16 @@ double ChampionData::base_value(StatId stat, int level) const {
 Champion::Champion(const ChampionData& data, int level)
     : name(data.name), resource_type(data.resource_type), range_type(data.range_type), data_(data),
       level_(level) {
-    health_.add({ModifierKind::Base, data.base_value(StatId::Health, level)});
-    health_regen_.add({ModifierKind::Base, data.base_value(StatId::HealthRegen, level)});
-    resource_.add({ModifierKind::Base, data.base_value(StatId::Resource, level)});
-    resource_regen_.add({ModifierKind::Base, data.base_value(StatId::ResourceRegen, level)});
-    attack_damage_.add({ModifierKind::Base, data.base_value(StatId::AttackDamage, level)});
-    attack_speed_.add({ModifierKind::Base, data.base_value(StatId::AttackSpeed, level)});
-    armor_.add({ModifierKind::Base, data.base_value(StatId::Armor, level)});
-    magic_resist_.add({ModifierKind::Base, data.base_value(StatId::MagicResist, level)});
-    movement_speed_.add({ModifierKind::Base, data.base_value(StatId::MovementSpeed, level)});
-    attack_range_.add({ModifierKind::Base, data.base_value(StatId::AttackRange, level)});
+    seed_pipeline(health_, data, StatId::Health, level);
+    seed_pipeline(health_regen_, data, StatId::HealthRegen, level);
+    seed_pipeline(resource_, data, StatId::Resource, level);
+    seed_pipeline(resource_regen_, data, StatId::ResourceRegen, level);
+    seed_pipeline(attack_damage_, data, StatId::AttackDamage, level);
+    seed_pipeline(attack_speed_, data, StatId::AttackSpeed, level);
+    seed_pipeline(armor_, data, StatId::Armor, level);
+    seed_pipeline(magic_resist_, data, StatId::MagicResist, level);
+    seed_pipeline(movement_speed_, data, StatId::MovementSpeed, level);
+    seed_pipeline(attack_range_, data, StatId::AttackRange, level);
 }
 
 StatPipeline& Champion::pipeline(StatId stat) {
@@ -119,7 +141,7 @@ double Champion::compute(StatId stat) const { return pipeline(stat).compute(); }
 void Champion::equip(const Item& item) {
     items_.push_back(item);
     for (const auto& mod : item.modifiers) {
-        pipeline(mod.stat).add({mod.kind, mod.value});
+        apply_modifier(pipeline(mod.stat), mod);
     }
 }
 
@@ -135,19 +157,19 @@ void Champion::unequip(const Item& item) {
                        &attack_speed_, &armor_, &magic_resist_, &movement_speed_, &attack_range_}) {
         *pipe = StatPipeline{};
     }
-    health_.add({ModifierKind::Base, data_.base_value(StatId::Health, level_)});
-    health_regen_.add({ModifierKind::Base, data_.base_value(StatId::HealthRegen, level_)});
-    resource_.add({ModifierKind::Base, data_.base_value(StatId::Resource, level_)});
-    resource_regen_.add({ModifierKind::Base, data_.base_value(StatId::ResourceRegen, level_)});
-    attack_damage_.add({ModifierKind::Base, data_.base_value(StatId::AttackDamage, level_)});
-    attack_speed_.add({ModifierKind::Base, data_.base_value(StatId::AttackSpeed, level_)});
-    armor_.add({ModifierKind::Base, data_.base_value(StatId::Armor, level_)});
-    magic_resist_.add({ModifierKind::Base, data_.base_value(StatId::MagicResist, level_)});
-    movement_speed_.add({ModifierKind::Base, data_.base_value(StatId::MovementSpeed, level_)});
-    attack_range_.add({ModifierKind::Base, data_.base_value(StatId::AttackRange, level_)});
+    seed_pipeline(health_, data_, StatId::Health, level_);
+    seed_pipeline(health_regen_, data_, StatId::HealthRegen, level_);
+    seed_pipeline(resource_, data_, StatId::Resource, level_);
+    seed_pipeline(resource_regen_, data_, StatId::ResourceRegen, level_);
+    seed_pipeline(attack_damage_, data_, StatId::AttackDamage, level_);
+    seed_pipeline(attack_speed_, data_, StatId::AttackSpeed, level_);
+    seed_pipeline(armor_, data_, StatId::Armor, level_);
+    seed_pipeline(magic_resist_, data_, StatId::MagicResist, level_);
+    seed_pipeline(movement_speed_, data_, StatId::MovementSpeed, level_);
+    seed_pipeline(attack_range_, data_, StatId::AttackRange, level_);
     for (const auto& equipped : items_) {
         for (const auto& mod : equipped.modifiers) {
-            pipeline(mod.stat).add({mod.kind, mod.value});
+            apply_modifier(pipeline(mod.stat), mod);
         }
     }
 }

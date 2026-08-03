@@ -2,8 +2,6 @@
 
 #include <vector>
 
-#include "stats/modifier.hpp"
-
 namespace moba_sim {
 
 /// Aggregates modifiers of one stat and computes the resulting value through
@@ -11,14 +9,17 @@ namespace moba_sim {
 ///
 ///     result = sum(Base) * (1 + sum(Inc)) * product(More)
 ///
-/// The three buckets are summed or multiplied as described by ModifierKind.
+/// Each bucket is a separate vector; add_base / add_inc / add_more push into
+/// the matching one.
 class StatPipeline {
   public:
-    /// Adds a modifier to the pipeline.
-    void add(const Modifier& modifier);
-
-    /// Returns all modifiers added so far.
-    [[nodiscard]] const std::vector<Modifier>& modifiers() const;
+    /// Adds a value to the Base bucket (summed additively).
+    void add_base(double value);
+    /// Adds a value to the Inc bucket (summed, applied as 1 + sum).
+    void add_inc(double value);
+    /// Adds a value to the More bucket (each entry applied as 1 + value,
+    /// multiplied together).
+    void add_more(double value);
 
     /// Returns the base value before any Inc/More scaling: sum(Base).
     [[nodiscard]] double base_total() const;
@@ -33,7 +34,9 @@ class StatPipeline {
     [[nodiscard]] double compute() const;
 
   private:
-    std::vector<Modifier> modifiers_;
+    std::vector<double> base_;
+    std::vector<double> inc_;
+    std::vector<double> more_;
 };
 
 } // namespace moba_sim

@@ -11,7 +11,17 @@ namespace {
 // Applies every modifier of `item` to the matching pipeline of `champ`.
 void apply_item(const Item& item, Champion& champ) {
     for (const auto& mod : item.modifiers) {
-        champ.pipeline(mod.stat).add({mod.kind, mod.value});
+        switch (mod.kind) {
+        case ModifierKind::Base:
+            champ.pipeline(mod.stat).add_base(mod.value);
+            break;
+        case ModifierKind::Inc:
+            champ.pipeline(mod.stat).add_inc(mod.value);
+            break;
+        case ModifierKind::More:
+            champ.pipeline(mod.stat).add_more(mod.value);
+            break;
+        }
     }
 }
 
