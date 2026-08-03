@@ -8,7 +8,6 @@ TEST_CASE("Champion holds base stats in the LoL wiki format", "[champion]") {
     // https://wiki.leagueoflegends.com/en-us/Ahri — "Base statistics"
     const Champion ahri{
         .name = "Ahri",
-        .role = Role::Mage,
         .resource_type = ResourceType::Mana,
         .range_type = RangeType::Ranged,
         .health = 590,
@@ -32,7 +31,6 @@ TEST_CASE("Champion holds base stats in the LoL wiki format", "[champion]") {
     };
 
     REQUIRE(ahri.name == "Ahri");
-    REQUIRE(ahri.role == Role::Mage);
     REQUIRE(ahri.resource_type == ResourceType::Mana);
     REQUIRE(ahri.range_type == RangeType::Ranged);
     REQUIRE(ahri.health == 590);
@@ -49,7 +47,6 @@ TEST_CASE("Champion has sensible defaults", "[champion]") {
 
     REQUIRE(champion.name.empty());
     REQUIRE(champion.health == 0.0);
-    REQUIRE(champion.role == Role::Fighter);
     REQUIRE(champion.resource_type == ResourceType::Mana);
     REQUIRE(champion.range_type == RangeType::Melee);
 }
