@@ -15,7 +15,7 @@ namespace moba_sim {
 class StatPipeline {
   public:
     /// Adds a modifier to the pipeline.
-    void add(Modifier modifier);
+    void add(const Modifier& modifier);
 
     /// Returns all modifiers added so far.
     [[nodiscard]] const std::vector<Modifier>& modifiers() const;
