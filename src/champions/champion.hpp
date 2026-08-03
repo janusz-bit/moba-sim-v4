@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "stats/stat_pipeline.hpp"
+
 namespace moba_sim {
 
 // Resource bar used by the champion's abilities
@@ -15,6 +17,20 @@ enum class ResourceType {
 enum class RangeType {
     Melee,
     Ranged,
+};
+
+// Identifies a champion stat that flows through the Base/Inc/More pipeline.
+enum class StatId {
+    Health,
+    HealthRegen,
+    Resource,
+    ResourceRegen,
+    AttackDamage,
+    AttackSpeed,
+    Armor,
+    MagicResist,
+    MovementSpeed,
+    AttackRange,
 };
 
 /// A League of Legends champion with base statistics in the wiki format:
@@ -47,6 +63,15 @@ struct Champion {
     double attack_speed_growth = 0.0; // in % of base attack speed
     double armor_growth = 0.0;
     double magic_resist_growth = 0.0;
+
+    /// Returns the champion's base value for `stat` at the given `level`
+    /// (base + growth * (level - 1)). At level 1 this is just the base value.
+    [[nodiscard]] double base_value(StatId stat, int level = 1) const;
+
+    /// Returns a pipeline seeded with the champion's base value for `stat`
+    /// at the given `level` as a single Base modifier. Callers can add
+    /// Inc/More modifiers (items, buffs) and then call compute().
+    [[nodiscard]] StatPipeline pipeline_for(StatId stat, int level = 1) const;
 };
 
 } // namespace moba_sim
