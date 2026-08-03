@@ -14,7 +14,7 @@ namespace moba_sim {
 struct EventSequence;
 
 using Event = std::variant<PlayerDiedEvent, KeyPressedEvent,
-                           std::unique_ptr<EventSequence> // Nesting!
+                           std::shared_ptr<EventSequence> // Nesting!
                            >;
 
 struct EventSequence {
