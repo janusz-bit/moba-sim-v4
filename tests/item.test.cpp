@@ -85,3 +85,26 @@ TEST_CASE("Item applies More modifier multiplicatively", "[item]") {
     // (100 + 50) * 1.1 = 165
     REQUIRE(champ.compute(StatId::AttackDamage) == 165);
 }
+
+TEST_CASE("Item modifiers_for returns only matching stat", "[item]") {
+    const Item item{
+        .name = "Mixed",
+        .modifiers =
+            {
+                {StatId::Health, ModifierKind::Base, 150},
+                {StatId::AttackDamage, ModifierKind::Base, 20},
+                {StatId::AttackDamage, ModifierKind::Inc, 0.1},
+                {StatId::Armor, ModifierKind::Base, 10},
+            },
+    };
+
+    const auto ad_mods = item.modifiers_for(StatId::AttackDamage);
+    REQUIRE(ad_mods.size() == 2);
+    REQUIRE(ad_mods[0].kind == ModifierKind::Base);
+    REQUIRE(ad_mods[0].value == 20);
+    REQUIRE(ad_mods[1].kind == ModifierKind::Inc);
+    REQUIRE(ad_mods[1].value == 0.1);
+
+    REQUIRE(item.modifiers_for(StatId::Health).size() == 1);
+    REQUIRE(item.modifiers_for(StatId::MagicResist).empty());
+}

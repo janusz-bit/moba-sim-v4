@@ -22,6 +22,9 @@ struct Item {
     std::string name;
     std::vector<ItemModifier> modifiers;
 
+    /// Returns the modifiers this item grants for the given stat.
+    [[nodiscard]] std::vector<ItemModifier> modifiers_for(StatId stat) const;
+
     /// Pushes every modifier of this item into the champion's matching
     /// stat pipeline.
     void apply_to(Champion& champion) const;
