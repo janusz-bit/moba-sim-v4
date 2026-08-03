@@ -5,6 +5,7 @@ add_library(moba_sim_core
     events/event_sequence.cpp
     events/key_pressed_event.cpp
     events/player_died_event.cpp
+    items/item.cpp
     stats/stat_pipeline.cpp
 )
 
