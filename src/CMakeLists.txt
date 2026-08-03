@@ -4,6 +4,7 @@ add_library(moba_sim_core
     events/event_sequence.cpp
     events/key_pressed_event.cpp
     events/player_died_event.cpp
+    stats/stat_pipeline.cpp
 )
 
 target_include_directories(moba_sim_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

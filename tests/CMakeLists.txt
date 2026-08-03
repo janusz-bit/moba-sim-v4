@@ -4,6 +4,7 @@ add_executable(moba_sim_tests
     champion.test.cpp
     event.test.cpp
     greeting.test.cpp
+    stat_pipeline.test.cpp
 )
 
 target_link_libraries(moba_sim_tests
