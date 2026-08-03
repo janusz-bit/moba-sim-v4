@@ -57,6 +57,7 @@ TEST_CASE("Full pipeline matches Base * (1 + Inc) * More", "[stats]") {
 TEST_CASE("Empty pipeline produces zero", "[stats]") {
     StatPipeline pipeline;
 
+    REQUIRE(pipeline.modifiers().empty());
     REQUIRE(pipeline.base_total() == 0.0);
     REQUIRE(pipeline.inc_multiplier() == 1.0);
     REQUIRE(pipeline.more_multiplier() == 1.0);

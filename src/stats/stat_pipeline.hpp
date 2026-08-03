@@ -14,9 +14,11 @@ namespace moba_sim {
 /// The three buckets are summed or multiplied as described by ModifierKind.
 class StatPipeline {
   public:
-    /// Adds a modifier to the matching bucket. More modifiers are stored as
-    /// raw multipliers (e.g. 0.2 for +20%) and converted internally.
+    /// Adds a modifier to the pipeline.
     void add(Modifier modifier);
+
+    /// Returns all modifiers added so far.
+    [[nodiscard]] const std::vector<Modifier>& modifiers() const;
 
     /// Returns the base value before any Inc/More scaling: sum(Base).
     [[nodiscard]] double base_total() const;
@@ -31,9 +33,7 @@ class StatPipeline {
     [[nodiscard]] double compute() const;
 
   private:
-    double base_sum_ = 0.0;
-    double inc_sum_ = 0.0;
-    double more_product_ = 1.0;
+    std::vector<Modifier> modifiers_;
 };
 
 } // namespace moba_sim
