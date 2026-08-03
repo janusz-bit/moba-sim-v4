@@ -33,6 +33,14 @@ enum class StatId {
     AttackRange,
 };
 
+struct Champion;
+
+/// Maps a StatId to the (base, growth) field pair it refers to.
+struct StatSpec {
+    double Champion::* base;
+    double Champion::* growth;
+};
+
 /// A League of Legends champion with base statistics in the wiki format:
 /// value at level 1 + growth added on each level-up.
 /// See e.g. https://wiki.leagueoflegends.com/en-us/Ahri ("Base statistics").
@@ -63,6 +71,8 @@ struct Champion {
     double attack_speed_growth = 0.0; // in % of base attack speed
     double armor_growth = 0.0;
     double magic_resist_growth = 0.0;
+    double movement_speed_growth = 0.0;
+    double attack_range_growth = 0.0;
 
     /// Returns the champion's base value for `stat` at the given `level`
     /// (base + growth * (level - 1)). At level 1 this is just the base value.
@@ -73,5 +83,33 @@ struct Champion {
     /// Inc/More modifiers (items, buffs) and then call compute().
     [[nodiscard]] StatPipeline pipeline_for(StatId stat, int level = 1) const;
 };
+
+/// Returns the (base, growth) field pointers for the given stat.
+/// Every stat uses the same `base + growth * (level - 1)` formula.
+[[nodiscard]] constexpr StatSpec spec_for(StatId stat) {
+    switch (stat) {
+    case StatId::Health:
+        return {&Champion::health, &Champion::health_growth};
+    case StatId::HealthRegen:
+        return {&Champion::health_regen, &Champion::health_regen_growth};
+    case StatId::Resource:
+        return {&Champion::resource, &Champion::resource_growth};
+    case StatId::ResourceRegen:
+        return {&Champion::resource_regen, &Champion::resource_regen_growth};
+    case StatId::AttackDamage:
+        return {&Champion::attack_damage, &Champion::attack_damage_growth};
+    case StatId::AttackSpeed:
+        return {&Champion::attack_speed, &Champion::attack_speed_growth};
+    case StatId::Armor:
+        return {&Champion::armor, &Champion::armor_growth};
+    case StatId::MagicResist:
+        return {&Champion::magic_resist, &Champion::magic_resist_growth};
+    case StatId::MovementSpeed:
+        return {&Champion::movement_speed, &Champion::movement_speed_growth};
+    case StatId::AttackRange:
+        return {&Champion::attack_range, &Champion::attack_range_growth};
+    }
+    return {nullptr, nullptr};
+}
 
 } // namespace moba_sim

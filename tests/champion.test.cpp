@@ -87,6 +87,21 @@ TEST_CASE("Champion base_value adds growth per level", "[champion]") {
     REQUIRE(ahri.base_value(StatId::AttackDamage, 18) == 104);
 }
 
+TEST_CASE("Every stat applies growth, including MS and range", "[champion]") {
+    const Champion champ{
+        .name = "Champ",
+        .movement_speed = 330,
+        .attack_range = 550,
+        .movement_speed_growth = 2,
+        .attack_range_growth = 5,
+    };
+
+    // MS at level 6: 330 + 2 * 5 = 340
+    REQUIRE(champ.base_value(StatId::MovementSpeed, 6) == 340);
+    // Range at level 6: 550 + 5 * 5 = 575
+    REQUIRE(champ.base_value(StatId::AttackRange, 6) == 575);
+}
+
 TEST_CASE("Champion pipeline_for seeds Base at level 1", "[champion]") {
     const Champion ahri{.name = "Ahri", .health = 590, .health_growth = 104};
 
