@@ -6,12 +6,23 @@
 
 using namespace moba_sim;
 
+namespace {
+
+// Applies every modifier of `item` to the matching pipeline of `champ`.
+void apply_item(const Item& item, Champion& champ) {
+    for (const auto& mod : item.modifiers) {
+        champ.pipeline(mod.stat).add({mod.kind, mod.value});
+    }
+}
+
+} // namespace
+
 TEST_CASE("Item with no modifiers does nothing", "[item]") {
     const ChampionData data{.name = "Ahri", .health = 590};
     Champion champ(data);
     const Item item{.name = "Empty", .modifiers = {}};
 
-    item.apply_to(champ);
+    apply_item(item, champ);
 
     REQUIRE(champ.compute(StatId::Health) == 590);
 }
@@ -24,7 +35,7 @@ TEST_CASE("Item applies a single Base modifier", "[item]") {
         .modifiers = {{StatId::Health, ModifierKind::Base, 150}},
     };
 
-    item.apply_to(champ);
+    apply_item(item, champ);
 
     REQUIRE(champ.compute(StatId::Health) == 740);
 }
@@ -41,7 +52,7 @@ TEST_CASE("Item applies mixed modifiers across stats", "[item]") {
             },
     };
 
-    item.apply_to(champ);
+    apply_item(item, champ);
 
     // Armor: 21 + 40 = 61
     REQUIRE(champ.compute(StatId::Armor) == 61);
@@ -61,8 +72,8 @@ TEST_CASE("Multiple items stack on the same stat", "[item]") {
         .modifiers = {{StatId::Health, ModifierKind::Base, 380}},
     };
 
-    ruby.apply_to(champ);
-    more_hp.apply_to(champ);
+    apply_item(ruby, champ);
+    apply_item(more_hp, champ);
 
     // 590 + 150 + 380 = 1120
     REQUIRE(champ.compute(StatId::Health) == 1120);
@@ -80,7 +91,7 @@ TEST_CASE("Item applies More modifier multiplicatively", "[item]") {
             },
     };
 
-    item.apply_to(champ);
+    apply_item(item, champ);
 
     // (100 + 50) * 1.1 = 165
     REQUIRE(champ.compute(StatId::AttackDamage) == 165);

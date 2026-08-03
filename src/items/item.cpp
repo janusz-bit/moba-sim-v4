@@ -12,10 +12,4 @@ std::vector<ItemModifier> Item::modifiers_for(StatId stat) const {
     return result;
 }
 
-void Item::apply_to(Champion& champion) const {
-    for (const auto& mod : modifiers) {
-        champion.pipeline(mod.stat).add({mod.kind, mod.value});
-    }
-}
-
 } // namespace moba_sim
