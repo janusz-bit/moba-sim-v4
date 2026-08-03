@@ -130,3 +130,74 @@ TEST_CASE("Champion accepts Inc/More modifiers on top of seeded base", "[champio
     // (68 + 10) * (1 + 0.2) * (1 + 0.1) = 78 * 1.2 * 1.1 = 102.96
     REQUIRE_THAT(champ.compute(StatId::AttackDamage), Catch::Matchers::WithinAbs(102.96, 1e-9));
 }
+
+TEST_CASE("Champion equip applies item modifiers", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .health = 590};
+    Champion champ(ahri);
+    const Item ruby{.name = "Ruby Crystal",
+                    .modifiers = {{StatId::Health, ModifierKind::Base, 150}}};
+
+    champ.equip(ruby);
+
+    REQUIRE(champ.items().size() == 1);
+    REQUIRE(champ.items()[0].name == "Ruby Crystal");
+    // 590 + 150 = 740
+    REQUIRE(champ.compute(StatId::Health) == 740);
+}
+
+TEST_CASE("Champion equip stacks multiple items", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .health = 590};
+    Champion champ(ahri);
+    const Item ruby{.name = "Ruby Crystal",
+                    .modifiers = {{StatId::Health, ModifierKind::Base, 150}}};
+    const Item belt{.name = "Giant's Belt",
+                    .modifiers = {{StatId::Health, ModifierKind::Base, 380}}};
+
+    champ.equip(ruby);
+    champ.equip(belt);
+
+    REQUIRE(champ.items().size() == 2);
+    // 590 + 150 + 380 = 1120
+    REQUIRE(champ.compute(StatId::Health) == 1120);
+}
+
+TEST_CASE("Champion unequip removes item and rebuilds pipelines", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .health = 590};
+    Champion champ(ahri);
+    const Item ruby{.name = "Ruby Crystal",
+                    .modifiers = {{StatId::Health, ModifierKind::Base, 150}}};
+    const Item belt{.name = "Giant's Belt",
+                    .modifiers = {{StatId::Health, ModifierKind::Base, 380}}};
+
+    champ.equip(ruby);
+    champ.equip(belt);
+    REQUIRE(champ.compute(StatId::Health) == 1120);
+
+    champ.unequip(ruby);
+
+    REQUIRE(champ.items().size() == 1);
+    REQUIRE(champ.items()[0].name == "Giant's Belt");
+    // 590 + 380 = 970
+    REQUIRE(champ.compute(StatId::Health) == 970);
+}
+
+TEST_CASE("Champion unequip of absent item is a no-op", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .health = 590};
+    Champion champ(ahri);
+    const Item ruby{.name = "Ruby Crystal",
+                    .modifiers = {{StatId::Health, ModifierKind::Base, 150}}};
+    const Item other{.name = "Phantom", .modifiers = {}};
+
+    champ.equip(ruby);
+    champ.unequip(other);
+
+    REQUIRE(champ.items().size() == 1);
+    REQUIRE(champ.compute(StatId::Health) == 740);
+}
+
+TEST_CASE("Champion starts with no items", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .health = 590};
+    const Champion champ(ahri);
+
+    REQUIRE(champ.items().empty());
+}

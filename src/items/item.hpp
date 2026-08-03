@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "champions/champion.hpp"
 #include "stats/modifier.hpp"
+#include "stats/stat_id.hpp"
 
 namespace moba_sim {
 

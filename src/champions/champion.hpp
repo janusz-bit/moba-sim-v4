@@ -1,7 +1,10 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
+#include "items/item.hpp"
+#include "stats/stat_id.hpp"
 #include "stats/stat_pipeline.hpp"
 
 namespace moba_sim {
@@ -17,20 +20,6 @@ enum class ResourceType {
 enum class RangeType {
     Melee,
     Ranged,
-};
-
-// Identifies a champion stat that flows through the Base/Inc/More pipeline.
-enum class StatId {
-    Health,
-    HealthRegen,
-    Resource,
-    ResourceRegen,
-    AttackDamage,
-    AttackSpeed,
-    Armor,
-    MagicResist,
-    MovementSpeed,
-    AttackRange,
 };
 
 /// Champion base statistics in the LoL wiki format:
@@ -94,6 +83,17 @@ struct Champion {
     /// Returns the fully computed value of `stat` (Base * Inc * More).
     [[nodiscard]] double compute(StatId stat) const;
 
+    /// Equips `item` on the champion: stores it and pushes every modifier
+    /// into the matching stat pipeline.
+    void equip(const Item& item);
+
+    /// Removes the first item equal to `item` (by name) and rebuilds the
+    /// stat pipelines from the champion data and remaining items.
+    void unequip(const Item& item);
+
+    /// Returns the items currently equipped.
+    [[nodiscard]] const std::vector<Item>& items() const;
+
   private:
     StatPipeline health_;
     StatPipeline health_regen_;
@@ -105,6 +105,11 @@ struct Champion {
     StatPipeline magic_resist_;
     StatPipeline movement_speed_;
     StatPipeline attack_range_;
+
+    std::vector<Item> items_;
+
+    ChampionData data_;
+    int level_ = 1;
 };
 
 } // namespace moba_sim
