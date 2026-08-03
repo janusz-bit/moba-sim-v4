@@ -33,18 +33,10 @@ enum class StatId {
     AttackRange,
 };
 
-struct Champion;
-
-/// Maps a StatId to the (base, growth) field pair it refers to.
-struct StatSpec {
-    double Champion::* base;
-    double Champion::* growth;
-};
-
-/// A League of Legends champion with base statistics in the wiki format:
+/// Champion base statistics in the LoL wiki format:
 /// value at level 1 + growth added on each level-up.
 /// See e.g. https://wiki.leagueoflegends.com/en-us/Ahri ("Base statistics").
-struct Champion {
+struct ChampionData {
     std::string name;
 
     ResourceType resource_type = ResourceType::Mana;
@@ -74,42 +66,45 @@ struct Champion {
     double movement_speed_growth = 0.0;
     double attack_range_growth = 0.0;
 
-    /// Returns the champion's base value for `stat` at the given `level`
+    /// Returns the base value for `stat` at the given `level`
     /// (base + growth * (level - 1)). At level 1 this is just the base value.
     [[nodiscard]] double base_value(StatId stat, int level = 1) const;
-
-    /// Returns a pipeline seeded with the champion's base value for `stat`
-    /// at the given `level` as a single Base modifier. Callers can add
-    /// Inc/More modifiers (items, buffs) and then call compute().
-    [[nodiscard]] StatPipeline pipeline_for(StatId stat, int level = 1) const;
 };
 
-/// Returns the (base, growth) field pointers for the given stat.
-/// Every stat uses the same `base + growth * (level - 1)` formula.
-[[nodiscard]] constexpr StatSpec spec_for(StatId stat) {
-    switch (stat) {
-    case StatId::Health:
-        return {&Champion::health, &Champion::health_growth};
-    case StatId::HealthRegen:
-        return {&Champion::health_regen, &Champion::health_regen_growth};
-    case StatId::Resource:
-        return {&Champion::resource, &Champion::resource_growth};
-    case StatId::ResourceRegen:
-        return {&Champion::resource_regen, &Champion::resource_regen_growth};
-    case StatId::AttackDamage:
-        return {&Champion::attack_damage, &Champion::attack_damage_growth};
-    case StatId::AttackSpeed:
-        return {&Champion::attack_speed, &Champion::attack_speed_growth};
-    case StatId::Armor:
-        return {&Champion::armor, &Champion::armor_growth};
-    case StatId::MagicResist:
-        return {&Champion::magic_resist, &Champion::magic_resist_growth};
-    case StatId::MovementSpeed:
-        return {&Champion::movement_speed, &Champion::movement_speed_growth};
-    case StatId::AttackRange:
-        return {&Champion::attack_range, &Champion::attack_range_growth};
-    }
-    return {nullptr, nullptr};
-}
+/// A live champion instance: each stat is a StatPipeline seeded from
+/// ChampionData at a given level, ready to receive Inc/More modifiers
+/// from items and buffs.
+struct Champion {
+    std::string name;
+    ResourceType resource_type = ResourceType::Mana;
+    RangeType range_type = RangeType::Melee;
+
+    Champion() = default;
+
+    /// Builds a champion from wiki data at the given `level`. Each stat's
+    /// pipeline is seeded with `base + growth*(level-1)` as a single Base
+    /// modifier.
+    Champion(const ChampionData& data, int level = 1);
+
+    /// Returns the pipeline for `stat`, so callers can add modifiers
+    /// (items, buffs) and inspect the result.
+    [[nodiscard]] StatPipeline& pipeline(StatId stat);
+    [[nodiscard]] const StatPipeline& pipeline(StatId stat) const;
+
+    /// Returns the fully computed value of `stat` (Base * Inc * More).
+    [[nodiscard]] double compute(StatId stat) const;
+
+  private:
+    StatPipeline health_;
+    StatPipeline health_regen_;
+    StatPipeline resource_;
+    StatPipeline resource_regen_;
+    StatPipeline attack_damage_;
+    StatPipeline attack_speed_;
+    StatPipeline armor_;
+    StatPipeline magic_resist_;
+    StatPipeline movement_speed_;
+    StatPipeline attack_range_;
+};
 
 } // namespace moba_sim

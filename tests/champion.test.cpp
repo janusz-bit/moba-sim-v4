@@ -5,9 +5,9 @@
 
 using namespace moba_sim;
 
-TEST_CASE("Champion holds base stats in the LoL wiki format", "[champion]") {
+TEST_CASE("ChampionData holds base stats in the LoL wiki format", "[champion]") {
     // https://wiki.leagueoflegends.com/en-us/Ahri — "Base statistics"
-    const Champion ahri{
+    const ChampionData ahri{
         .name = "Ahri",
         .resource_type = ResourceType::Mana,
         .range_type = RangeType::Ranged,
@@ -43,17 +43,17 @@ TEST_CASE("Champion holds base stats in the LoL wiki format", "[champion]") {
     REQUIRE(ahri.magic_resist_growth == 1.3);
 }
 
-TEST_CASE("Champion has sensible defaults", "[champion]") {
-    const Champion champion;
+TEST_CASE("ChampionData has sensible defaults", "[champion]") {
+    const ChampionData data;
 
-    REQUIRE(champion.name.empty());
-    REQUIRE(champion.health == 0.0);
-    REQUIRE(champion.resource_type == ResourceType::Mana);
-    REQUIRE(champion.range_type == RangeType::Melee);
+    REQUIRE(data.name.empty());
+    REQUIRE(data.health == 0.0);
+    REQUIRE(data.resource_type == ResourceType::Mana);
+    REQUIRE(data.range_type == RangeType::Melee);
 }
 
-TEST_CASE("Champion base_value uses base at level 1", "[champion]") {
-    const Champion ahri{
+TEST_CASE("ChampionData base_value uses base at level 1", "[champion]") {
+    const ChampionData ahri{
         .name = "Ahri",
         .range_type = RangeType::Ranged,
         .health = 590,
@@ -70,8 +70,8 @@ TEST_CASE("Champion base_value uses base at level 1", "[champion]") {
     REQUIRE(ahri.base_value(StatId::AttackRange) == 550);
 }
 
-TEST_CASE("Champion base_value adds growth per level", "[champion]") {
-    const Champion ahri{
+TEST_CASE("ChampionData base_value adds growth per level", "[champion]") {
+    const ChampionData ahri{
         .name = "Ahri",
         .health = 590,
         .attack_damage = 53,
@@ -88,7 +88,7 @@ TEST_CASE("Champion base_value adds growth per level", "[champion]") {
 }
 
 TEST_CASE("Every stat applies growth, including MS and range", "[champion]") {
-    const Champion champ{
+    const ChampionData champ{
         .name = "Champ",
         .movement_speed = 330,
         .attack_range = 550,
@@ -102,23 +102,31 @@ TEST_CASE("Every stat applies growth, including MS and range", "[champion]") {
     REQUIRE(champ.base_value(StatId::AttackRange, 6) == 575);
 }
 
-TEST_CASE("Champion pipeline_for seeds Base at level 1", "[champion]") {
-    const Champion ahri{.name = "Ahri", .health = 590, .health_growth = 104};
+TEST_CASE("Champion seeds each stat pipeline from ChampionData", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .health = 590, .health_growth = 104};
 
-    auto pipeline = ahri.pipeline_for(StatId::Health);
-    REQUIRE(pipeline.base_total() == 590);
-    REQUIRE(pipeline.compute() == 590);
+    const Champion champ(ahri);
+    REQUIRE(champ.compute(StatId::Health) == 590);
+    REQUIRE(champ.pipeline(StatId::Health).base_total() == 590);
 }
 
-TEST_CASE("Champion pipeline accepts Inc/More modifiers on top of base", "[champion]") {
-    const Champion ahri{.name = "Ahri", .attack_damage = 53, .attack_damage_growth = 3};
+TEST_CASE("Champion seeds pipelines at the given level", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .health = 590, .health_growth = 104};
+
+    // Level 5: 590 + 104 * 4 = 1006
+    const Champion champ(ahri, 5);
+    REQUIRE(champ.compute(StatId::Health) == 1006);
+}
+
+TEST_CASE("Champion accepts Inc/More modifiers on top of seeded base", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .attack_damage = 53, .attack_damage_growth = 3};
 
     // Level 6 AD: 53 + 3 * 5 = 68. Add +10 AD (Base), +20% Inc, +10% More.
-    auto pipeline = ahri.pipeline_for(StatId::AttackDamage, 6);
-    pipeline.add({ModifierKind::Base, 10});
-    pipeline.add({ModifierKind::Inc, 0.2});
-    pipeline.add({ModifierKind::More, 0.1});
+    Champion champ(ahri, 6);
+    champ.pipeline(StatId::AttackDamage).add({ModifierKind::Base, 10});
+    champ.pipeline(StatId::AttackDamage).add({ModifierKind::Inc, 0.2});
+    champ.pipeline(StatId::AttackDamage).add({ModifierKind::More, 0.1});
 
     // (68 + 10) * (1 + 0.2) * (1 + 0.1) = 78 * 1.2 * 1.1 = 102.96
-    REQUIRE_THAT(pipeline.compute(), Catch::Matchers::WithinAbs(102.96, 1e-9));
+    REQUIRE_THAT(champ.compute(StatId::AttackDamage), Catch::Matchers::WithinAbs(102.96, 1e-9));
 }
