@@ -23,13 +23,36 @@ nix flake check --print-build-logs    # what CI runs: nix build + pre-commit hoo
 pre-commit run --all-files           # clang-format + nixfmt
 ```
 
+`nix run` works without a dev shell or a local build tree:
+
+```sh
+nix run .#tests                      # whole Catch2 suite
+nix run .#tests -- "[effects]"       # args pass through to Catch2
+nix run .#moba-sim-view              # SDL demo
+nix run .                            # console demo (= .#moba-sim)
+```
+
+Apps are defined in `nix/default.nix`. Each is a `writeShellApplication` wrapper
+rather than a bare `program` path, because `nix run` accepts only an executable — a wrapper
+is the only way to set an env var (`.#tests` forces `SDL_VIDEO_DRIVER=dummy`, since
+`game_loop.test.cpp` opens a window) while still forwarding `"$@"`.
+
+`packages.default` has two outputs: `out` (both binaries) and `tests` (the Catch2 binary,
+installed by `postInstall` from the same build). The test binary is a separate CMake
+install component with `EXCLUDE_FROM_ALL`, so it stays out of the release output while
+`nix run .#tests` avoids a second compile. That component spells out
+`DESTINATION bin` explicitly: nixpkgs' cmake hook points `CMAKE_INSTALL_BINDIR` at an
+absolute path under `$out`, and an absolute install dir makes `cmake --install --prefix`
+silently do nothing.
+
 `catch_discover_tests` registers each `TEST_CASE` as its own ctest test named by the test
 case string. No ctest labels exist, so Catch2 tags (`[stats]`, `[champion]`, `[item]`,
-`[effects]`, `[tick]`, `[events]`) are only usable by invoking the test binary directly.
+`[effects]`, `[tick]`, `[events]`) are only usable by invoking the test binary directly —
+either `./build/tests/moba_sim_tests` or `nix run .#tests --`.
 
 Nix builds from the **git tree**, so a new file that is not at least `git add`-ed is invisible
-to `nix build` / `nix flake check` and to the pre-commit hooks, even though the local
-`cmake --build build` succeeds. Stage new sources before running either.
+to `nix build` / `nix flake check` / `nix run` and to the pre-commit hooks, even though the
+local `cmake --build build` succeeds. Stage new sources before running any of them.
 
 `nix fmt` formats **Nix files only** (`nixfmt-tree`). C++ formatting happens through the
 clang-format pre-commit hook, never `nix fmt`.

@@ -636,6 +636,7 @@ requires the binary directly:
 ```sh
 ctest --test-dir build                    # everything
 ./build/tests/moba_sim_tests "[effects]"  # by tag
+nix run .#tests -- "[effects]"            # by tag, without a local build tree
 ```
 
 | File | Covers |

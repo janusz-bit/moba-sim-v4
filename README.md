@@ -39,6 +39,18 @@ reasoning behind it.
 | `moba-sim-view` | Interactive SDL3 demo: move a champion with WASD; movement speed comes live from the stat pipeline. SPACE applies a 3-second haste buff that expires on its own, TAB prints a stat breakdown, Escape quits. |
 | `moba_sim_tests` | Catch2 test suite. |
 
+## Running
+
+No checkout build needed — `nix run` fetches, builds and runs:
+
+```sh
+nix run .                       # console demo
+nix run .#moba-sim-view         # interactive SDL3 demo
+nix run .#tests                 # the whole Catch2 suite
+nix run .#tests -- "[effects]"  # arguments pass through to Catch2
+nix run .#tests -- --list-tests
+```
+
 ## Building
 
 ### With Nix (recommended)
@@ -50,6 +62,10 @@ nix develop        # dev shell with cmake, ninja, clang, SDL3, Catch2,
                    # clang-tools and pre-commit hooks (direnv: `use flake`)
 ```
 
+`nix build` produces two outputs: `out` with both binaries and `tests` with the
+Catch2 binary, so `nix run .#tests` reuses that build instead of compiling
+everything a second time.
+
 ### Manually
 
 Requires CMake >= 3.25, a C++23 compiler, SDL3 and Catch2 v3.
@@ -58,6 +74,7 @@ Requires CMake >= 3.25, a C++23 compiler, SDL3 and Catch2 v3.
 cmake -B build -G Ninja
 cmake --build build
 ctest --test-dir build
+./build/tests/moba_sim_tests "[effects]"   # filter by tag
 ```
 
 ## Development

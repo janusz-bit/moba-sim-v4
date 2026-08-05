@@ -23,3 +23,19 @@ target_link_libraries(moba_sim_tests
 
 include(Catch)
 catch_discover_tests(moba_sim_tests)
+
+# Installed under its own component, excluded from the default install: the
+# release output stays free of test binaries, while `cmake --install build
+# --component tests --prefix <dir>` can place it somewhere (the Nix `tests`
+# output) without building the project a second time.
+#
+# DESTINATION is spelled out as a relative path on purpose. It would otherwise
+# default to CMAKE_INSTALL_BINDIR, which nixpkgs' cmake hook sets to an
+# absolute path under $out -- and an absolute install dir silently ignores
+# --prefix.
+install(TARGETS moba_sim_tests
+    RUNTIME
+        DESTINATION bin
+        COMPONENT tests
+        EXCLUDE_FROM_ALL
+)
