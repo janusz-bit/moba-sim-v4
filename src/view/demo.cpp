@@ -1,8 +1,11 @@
 #include <cmath>
+#include <iostream>
 #include <vector>
 
 #include <SDL3/SDL.h>
 
+#include "champions/champion.hpp"
+#include "stats/stat_breakdown.hpp"
 #include "view/game_loop.hpp"
 
 using moba_sim::view::Color;
@@ -49,7 +52,31 @@ Vec2 clamp_to_arena(Vec2 pos, float radius, float arena_w, float arena_h) {
 int main() {
     moba_sim::view::GameLoop loop{"moba-sim view", 1024, 768, 60.0};
 
+    // The player unit is a real champion, so its movement speed comes from
+    // the stat pipeline. Pressing TAB prints a breakdown showing where each
+    // of the player's numbers comes from.
+    const moba_sim::ChampionData player_data{
+        .name = "Anna",
+        .attack_damage = 60,
+        .movement_speed = 240,
+        .attack_damage_growth = 3,
+        .movement_speed_growth = 5,
+    };
+    moba_sim::Champion player_champion{player_data, 3};
+    player_champion.equip(moba_sim::Item{
+        .name = "B.F. Sword",
+        .modifiers = {{moba_sim::StatId::AttackDamage, moba_sim::ModifierKind::Base, 40}}});
+    player_champion.equip(moba_sim::Item{
+        .name = "Boots of Speed",
+        .modifiers = {{moba_sim::StatId::MovementSpeed, moba_sim::ModifierKind::Base, 35}}});
+    player_champion.equip(moba_sim::Item{
+        .name = "Zeal",
+        .modifiers = {{moba_sim::StatId::MovementSpeed, moba_sim::ModifierKind::Inc, 0.10}}});
+
+    std::cout << "WASD/arrows: move, TAB: where do the player's numbers come from?, ESC: quit\n";
+
     Unit player{{512.0f, 384.0f}, {0.0f, 0.0f}, 18.0f, {90, 160, 255}};
+    bool tab_was_down = false;
 
     std::vector<Unit> npcs{
         {{200.0f, 150.0f}, {140.0f, 90.0f}, 14.0f, {230, 90, 90}},
@@ -87,8 +114,26 @@ int main() {
                 dir.x += 1.0f;
             }
 
-            constexpr float player_speed = 280.0f; // pixels per second
+            // The player's speed is not a magic constant: it flows from
+            // the champion's stat pipeline (base + items).
+            const float player_speed =
+                static_cast<float>(player_champion.compute(moba_sim::StatId::MovementSpeed));
             player.vel = normalized(dir) * player_speed;
+
+            // TAB (edge-triggered): print the breakdown of the player's numbers.
+            const bool tab_down = keys[SDL_SCANCODE_TAB];
+            if (tab_down && !tab_was_down) {
+                std::cout << moba_sim::format_breakdown(
+                                 "MovementSpeed",
+                                 player_champion.explain(moba_sim::StatId::MovementSpeed))
+                          << "\n\n"
+                          << moba_sim::format_breakdown(
+                                 "AttackDamage",
+                                 player_champion.explain(moba_sim::StatId::AttackDamage))
+                          << "\n"
+                          << std::endl;
+            }
+            tab_was_down = tab_down;
             player.pos =
                 clamp_to_arena(player.pos + player.vel * fdt, player.radius, arena_w, arena_h);
 

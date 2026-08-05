@@ -6,6 +6,7 @@ add_library(moba_sim_core
     events/key_pressed_event.cpp
     events/player_died_event.cpp
     items/item.cpp
+    stats/stat_breakdown.cpp
     stats/stat_pipeline.cpp
 )
 
@@ -27,6 +28,6 @@ add_executable(moba-sim main.cpp)
 target_link_libraries(moba-sim PRIVATE moba_sim_core)
 
 add_executable(moba-sim-view view/demo.cpp)
-target_link_libraries(moba-sim-view PRIVATE moba_sim_view)
+target_link_libraries(moba-sim-view PRIVATE moba_sim_core moba_sim_view)
 
 install(TARGETS moba-sim moba-sim-view)

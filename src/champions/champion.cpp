@@ -40,22 +40,28 @@ constexpr StatSpec spec_for(StatId stat) {
 
 namespace {
 
-void apply_modifier(StatPipeline& pipe, const ItemModifier& mod) {
+void apply_modifier(StatPipeline& pipe, const ItemModifier& mod, const std::string& source) {
     switch (mod.kind) {
     case ModifierKind::Base:
-        pipe.add_base(mod.value);
+        pipe.add_base(mod.value, source);
         break;
     case ModifierKind::Inc:
-        pipe.add_inc(mod.value);
+        pipe.add_inc(mod.value, source);
         break;
     case ModifierKind::More:
-        pipe.add_more(mod.value);
+        pipe.add_more(mod.value, source);
         break;
     }
 }
 
+/// Source label for the champion's own base stat, e.g. "Ahri base, lvl 5".
+std::string base_source(const ChampionData& data, int level) {
+    const std::string name = data.name.empty() ? "(unnamed)" : data.name;
+    return name + " base, lvl " + std::to_string(level);
+}
+
 void seed_pipeline(StatPipeline& pipe, const ChampionData& data, StatId stat, int level) {
-    pipe.add_base(data.base_value(stat, level));
+    pipe.add_base(data.base_value(stat, level), base_source(data, level));
 }
 
 } // namespace
@@ -138,10 +144,12 @@ const StatPipeline& Champion::pipeline(StatId stat) const {
 
 double Champion::compute(StatId stat) const { return pipeline(stat).compute(); }
 
+StatBreakdown Champion::explain(StatId stat) const { return pipeline(stat).breakdown(); }
+
 void Champion::equip(const Item& item) {
     items_.push_back(item);
     for (const auto& mod : item.modifiers) {
-        apply_modifier(pipeline(mod.stat), mod);
+        apply_modifier(pipeline(mod.stat), mod, item.name);
     }
 }
 
@@ -169,7 +177,7 @@ void Champion::unequip(const Item& item) {
     seed_pipeline(attack_range_, data_, StatId::AttackRange, level_);
     for (const auto& equipped : items_) {
         for (const auto& mod : equipped.modifiers) {
-            apply_modifier(pipeline(mod.stat), mod);
+            apply_modifier(pipeline(mod.stat), mod, equipped.name);
         }
     }
 }

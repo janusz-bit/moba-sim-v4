@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "items/item.hpp"
+#include "stats/stat_breakdown.hpp"
 #include "stats/stat_id.hpp"
 #include "stats/stat_pipeline.hpp"
 
@@ -82,6 +83,10 @@ struct Champion {
 
     /// Returns the fully computed value of `stat` (Base * Inc * More).
     [[nodiscard]] double compute(StatId stat) const;
+
+    /// Returns the provenance of `stat`: every contributing modifier labeled
+    /// with its source (champion base, item, ...), for debugging.
+    [[nodiscard]] StatBreakdown explain(StatId stat) const;
 
     /// Equips `item` on the champion: stores it and pushes every modifier
     /// into the matching stat pipeline.

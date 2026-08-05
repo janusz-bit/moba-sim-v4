@@ -6,6 +6,7 @@ add_executable(moba_sim_tests
     game_loop.test.cpp
     greeting.test.cpp
     item.test.cpp
+    stat_breakdown.test.cpp
     stat_pipeline.test.cpp
     view_geometry.test.cpp
 )
