@@ -1,6 +1,5 @@
 add_library(moba_sim_core
     champions/champion.cpp
-    core/greeting.cpp
     events/event.cpp
     events/event_sequence.cpp
     events/key_pressed_event.cpp

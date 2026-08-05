@@ -4,7 +4,6 @@ add_executable(moba_sim_tests
     champion.test.cpp
     event.test.cpp
     game_loop.test.cpp
-    greeting.test.cpp
     item.test.cpp
     stat_breakdown.test.cpp
     stat_pipeline.test.cpp
