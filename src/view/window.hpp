@@ -1,0 +1,35 @@
+#pragma once
+
+#include <string_view>
+
+struct SDL_Renderer;
+struct SDL_Window;
+
+namespace moba_sim::view {
+
+/// RAII wrapper over an SDL3 window and its 2D renderer. Initializes the SDL
+/// video subsystem on construction and shuts it down on destruction. Throws
+/// std::runtime_error if initialization fails.
+class Window {
+  public:
+    Window(std::string_view title, int width, int height);
+    ~Window();
+
+    Window(const Window&) = delete;
+    Window& operator=(const Window&) = delete;
+    Window(Window&&) = delete;
+    Window& operator=(Window&&) = delete;
+
+    /// Returns the underlying SDL renderer.
+    [[nodiscard]] SDL_Renderer* renderer() const { return renderer_; }
+
+    /// Returns the current window size in pixels.
+    [[nodiscard]] int width() const;
+    [[nodiscard]] int height() const;
+
+  private:
+    SDL_Window* window_ = nullptr;
+    SDL_Renderer* renderer_ = nullptr;
+};
+
+} // namespace moba_sim::view
