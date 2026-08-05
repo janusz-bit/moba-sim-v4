@@ -50,7 +50,8 @@ Vec2 clamp_to_arena(Vec2 pos, float radius, float arena_w, float arena_h) {
 } // namespace
 
 int main() {
-    moba_sim::view::GameLoop loop{"moba-sim view", 1024, 768, 60.0};
+    constexpr int kTicksPerSecond = 60;
+    moba_sim::view::GameLoop loop{"moba-sim view", 1024, 768, static_cast<double>(kTicksPerSecond)};
 
     // The player unit is a real champion, so its movement speed comes from
     // the stat pipeline. Pressing TAB prints a breakdown showing where each
@@ -63,20 +64,33 @@ int main() {
         .movement_speed_growth = 5,
     };
     moba_sim::Champion player_champion{player_data, 3};
+    player_champion.set_tick_rate(moba_sim::TickRate{kTicksPerSecond});
+    player_champion.equip(
+        moba_sim::Item{.name = "B.F. Sword",
+                       .modifiers = {moba_sim::base_mod(moba_sim::StatId::AttackDamage, 40)}});
+    player_champion.equip(
+        moba_sim::Item{.name = "Boots of Speed",
+                       .modifiers = {moba_sim::base_mod(moba_sim::StatId::MovementSpeed, 35)}});
     player_champion.equip(moba_sim::Item{
-        .name = "B.F. Sword",
-        .modifiers = {{moba_sim::StatId::AttackDamage, moba_sim::ModifierKind::Base, 40}}});
-    player_champion.equip(moba_sim::Item{
-        .name = "Boots of Speed",
-        .modifiers = {{moba_sim::StatId::MovementSpeed, moba_sim::ModifierKind::Base, 35}}});
-    player_champion.equip(moba_sim::Item{
-        .name = "Zeal",
-        .modifiers = {{moba_sim::StatId::MovementSpeed, moba_sim::ModifierKind::Inc, 0.10}}});
+        .name = "Zeal", .modifiers = {moba_sim::inc_mod(moba_sim::StatId::MovementSpeed, 0.10)}});
 
-    std::cout << "WASD/arrows: move, TAB: where do the player's numbers come from?, ESC: quit\n";
+    // A timed haste buff: SPACE applies it, and it expires on its own after
+    // 3 seconds of simulation time. Nothing polls it and nothing tracks its
+    // deadline by hand — the effect's Lifetime is data the framework owns.
+    const moba_sim::EffectKey haste_key{.source = "Anna", .name = "Haste"};
+    const auto haste = [&] {
+        return moba_sim::flat_effect(
+            haste_key, {moba_sim::inc_mod(moba_sim::StatId::MovementSpeed, 0.40)},
+            moba_sim::Timed::for_span(player_champion.now(),
+                                      player_champion.tick_rate().ticks_from_seconds(3.0)));
+    };
+
+    std::cout << "WASD/arrows: move, SPACE: 3s haste buff, "
+                 "TAB: where do the player's numbers come from?, ESC: quit\n";
 
     Unit player{{512.0f, 384.0f}, {0.0f, 0.0f}, 18.0f, {90, 160, 255}};
     bool tab_was_down = false;
+    bool space_was_down = false;
 
     std::vector<Unit> npcs{
         {{200.0f, 150.0f}, {140.0f, 90.0f}, 14.0f, {230, 90, 90}},
@@ -98,6 +112,14 @@ int main() {
             const float arena_w = static_cast<float>(loop.width());
             const float arena_h = static_cast<float>(loop.height());
 
+            // One simulation tick. The loop's dt is fixed and matches the
+            // champion's tick rate, so wall-clock time never leaks into the
+            // simulation: buff expiry is counted in ticks.
+            for (const moba_sim::EffectKey& expired :
+                 player_champion.advance_by(moba_sim::TickSpan{1})) {
+                std::cout << "expired: " << expired.label() << "\n";
+            }
+
             // Player movement from WASD / arrow keys.
             const bool* keys = SDL_GetKeyboardState(nullptr);
             Vec2 dir{};
@@ -114,8 +136,16 @@ int main() {
                 dir.x += 1.0f;
             }
 
-            // The player's speed is not a magic constant: it flows from
-            // the champion's stat pipeline (base + items).
+            // SPACE (edge-triggered): apply or refresh the haste buff.
+            const bool space_down = keys[SDL_SCANCODE_SPACE];
+            if (space_down && !space_was_down) {
+                player_champion.apply_effect(haste());
+                std::cout << "haste applied, refreshed to 3.0s\n";
+            }
+            space_was_down = space_down;
+
+            // The player's speed is not a magic constant: it flows from the
+            // champion's stat pipeline (base + items + live effects).
             const float player_speed =
                 static_cast<float>(player_champion.compute(moba_sim::StatId::MovementSpeed));
             player.vel = normalized(dir) * player_speed;

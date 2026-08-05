@@ -6,33 +6,11 @@
 
 using namespace moba_sim;
 
-namespace {
-
-// Applies every modifier of `item` to the matching pipeline of `champ`.
-void apply_item(const Item& item, Champion& champ) {
-    for (const auto& mod : item.modifiers) {
-        switch (mod.kind) {
-        case ModifierKind::Base:
-            champ.pipeline(mod.stat).add_base(mod.value);
-            break;
-        case ModifierKind::Inc:
-            champ.pipeline(mod.stat).add_inc(mod.value);
-            break;
-        case ModifierKind::More:
-            champ.pipeline(mod.stat).add_more(mod.value);
-            break;
-        }
-    }
-}
-
-} // namespace
-
 TEST_CASE("Item with no modifiers does nothing", "[item]") {
     const ChampionData data{.name = "Ahri", .health = 590};
     Champion champ(data);
-    const Item item{.name = "Empty", .modifiers = {}};
 
-    apply_item(item, champ);
+    champ.equip(Item{.name = "Empty", .modifiers = {}});
 
     REQUIRE(champ.compute(StatId::Health) == 590);
 }
@@ -40,12 +18,8 @@ TEST_CASE("Item with no modifiers does nothing", "[item]") {
 TEST_CASE("Item applies a single Base modifier", "[item]") {
     const ChampionData data{.name = "Ahri", .health = 590};
     Champion champ(data);
-    const Item item{
-        .name = "Ruby Crystal",
-        .modifiers = {{StatId::Health, ModifierKind::Base, 150}},
-    };
 
-    apply_item(item, champ);
+    champ.equip(Item{.name = "Ruby Crystal", .modifiers = {base_mod(StatId::Health, 150)}});
 
     REQUIRE(champ.compute(StatId::Health) == 740);
 }
@@ -53,16 +27,11 @@ TEST_CASE("Item applies a single Base modifier", "[item]") {
 TEST_CASE("Item applies mixed modifiers across stats", "[item]") {
     const ChampionData data{.name = "Ahri", .attack_damage = 53, .armor = 21};
     Champion champ(data);
-    const Item item{
-        .name = "Chain Vest",
-        .modifiers =
-            {
-                {StatId::Armor, ModifierKind::Base, 40},
-                {StatId::AttackDamage, ModifierKind::Inc, 0.1},
-            },
-    };
 
-    apply_item(item, champ);
+    champ.equip(Item{
+        .name = "Chain Vest",
+        .modifiers = {base_mod(StatId::Armor, 40), inc_mod(StatId::AttackDamage, 0.1)},
+    });
 
     // Armor: 21 + 40 = 61
     REQUIRE(champ.compute(StatId::Armor) == 61);
@@ -73,17 +42,9 @@ TEST_CASE("Item applies mixed modifiers across stats", "[item]") {
 TEST_CASE("Multiple items stack on the same stat", "[item]") {
     const ChampionData data{.name = "Ahri", .health = 590};
     Champion champ(data);
-    const Item ruby{
-        .name = "Ruby Crystal",
-        .modifiers = {{StatId::Health, ModifierKind::Base, 150}},
-    };
-    const Item more_hp{
-        .name = "Giant's Belt",
-        .modifiers = {{StatId::Health, ModifierKind::Base, 380}},
-    };
 
-    apply_item(ruby, champ);
-    apply_item(more_hp, champ);
+    champ.equip(Item{.name = "Ruby Crystal", .modifiers = {base_mod(StatId::Health, 150)}});
+    champ.equip(Item{.name = "Giant's Belt", .modifiers = {base_mod(StatId::Health, 380)}});
 
     // 590 + 150 + 380 = 1120
     REQUIRE(champ.compute(StatId::Health) == 1120);
@@ -92,19 +53,40 @@ TEST_CASE("Multiple items stack on the same stat", "[item]") {
 TEST_CASE("Item applies More modifier multiplicatively", "[item]") {
     const ChampionData data{.name = "Ahri", .attack_damage = 100};
     Champion champ(data);
-    const Item item{
-        .name = "More AD",
-        .modifiers =
-            {
-                {StatId::AttackDamage, ModifierKind::Base, 50},
-                {StatId::AttackDamage, ModifierKind::More, 0.1},
-            },
-    };
 
-    apply_item(item, champ);
+    champ.equip(Item{
+        .name = "More AD",
+        .modifiers = {base_mod(StatId::AttackDamage, 50), more_mod(StatId::AttackDamage, 0.1)},
+    });
 
     // (100 + 50) * 1.1 = 165
     REQUIRE(champ.compute(StatId::AttackDamage) == 165);
+}
+
+TEST_CASE("Item modifiers are labeled with the item name", "[item]") {
+    const ChampionData data{.name = "Ahri", .attack_damage = 100};
+    Champion champ(data);
+
+    champ.equip(Item{.name = "B.F. Sword", .modifiers = {base_mod(StatId::AttackDamage, 40)}});
+
+    const StatBreakdown breakdown = champ.explain(StatId::AttackDamage);
+    REQUIRE(breakdown.base.size() == 2);
+    CHECK(breakdown.base[1].source == "B.F. Sword");
+}
+
+TEST_CASE("Item modifier keeps its own source label when set", "[item]") {
+    // A single item can attribute lines to sub-sources, e.g. an item passive.
+    const ChampionData data{.name = "Ahri", .attack_damage = 100};
+    Champion champ(data);
+
+    champ.equip(Item{
+        .name = "Zeal",
+        .modifiers = {base_mod(StatId::AttackDamage, 10, "Zeal (passive)")},
+    });
+
+    const StatBreakdown breakdown = champ.explain(StatId::AttackDamage);
+    REQUIRE(breakdown.base.size() == 2);
+    CHECK(breakdown.base[1].source == "Zeal (passive)");
 }
 
 TEST_CASE("Item modifiers_for returns only matching stat", "[item]") {
@@ -112,10 +94,10 @@ TEST_CASE("Item modifiers_for returns only matching stat", "[item]") {
         .name = "Mixed",
         .modifiers =
             {
-                {StatId::Health, ModifierKind::Base, 150},
-                {StatId::AttackDamage, ModifierKind::Base, 20},
-                {StatId::AttackDamage, ModifierKind::Inc, 0.1},
-                {StatId::Armor, ModifierKind::Base, 10},
+                base_mod(StatId::Health, 150),
+                base_mod(StatId::AttackDamage, 20),
+                inc_mod(StatId::AttackDamage, 0.1),
+                base_mod(StatId::Armor, 10),
             },
     };
 

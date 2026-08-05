@@ -2,11 +2,15 @@ find_package(Catch2 3 REQUIRED)
 
 add_executable(moba_sim_tests
     champion.test.cpp
+    champion_effects.test.cpp
+    effect.test.cpp
     event.test.cpp
     game_loop.test.cpp
     item.test.cpp
     stat_breakdown.test.cpp
     stat_pipeline.test.cpp
+    stat_table.test.cpp
+    tick.test.cpp
     view_geometry.test.cpp
 )
 

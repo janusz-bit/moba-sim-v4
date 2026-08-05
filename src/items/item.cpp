@@ -2,8 +2,8 @@
 
 namespace moba_sim {
 
-std::vector<ItemModifier> Item::modifiers_for(StatId stat) const {
-    std::vector<ItemModifier> result;
+std::vector<Modifier> Item::modifiers_for(StatId stat) const {
+    std::vector<Modifier> result;
     for (const auto& mod : modifiers) {
         if (mod.stat == stat) {
             result.push_back(mod);

@@ -1,17 +1,21 @@
 #pragma once
 
-#include <array>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "effects/effect.hpp"
+#include "effects/effect_set.hpp"
 #include "items/item.hpp"
+#include "sim/tick.hpp"
 #include "stats/stat_breakdown.hpp"
 #include "stats/stat_id.hpp"
 #include "stats/stat_pipeline.hpp"
+#include "stats/stat_table.hpp"
 
 namespace moba_sim {
 
-// Resource bar used by the champion's abilities
+/// Resource bar used by the champion's abilities.
 enum class ResourceType {
     None,
     Mana,
@@ -28,7 +32,7 @@ enum class RangeType {
 /// value at level 1 + growth added on each level-up.
 /// See e.g. https://wiki.leagueoflegends.com/en-us/Ahri ("Base statistics").
 struct ChampionData {
-    std::string name;
+    std::string name{};
 
     ResourceType resource_type = ResourceType::Mana;
     RangeType range_type = RangeType::Melee;
@@ -62,56 +66,117 @@ struct ChampionData {
     [[nodiscard]] double base_value(StatId stat, int level = 1) const;
 };
 
-/// A live champion instance: each stat is a StatPipeline seeded from
-/// ChampionData at a given level, ready to receive Inc/More modifiers
-/// from items and buffs.
-struct Champion {
+/// A live champion: base stats from ChampionData at a level, plus items, plus
+/// effects, resolved into one StatTable.
+///
+/// Every modifier comes from a source the champion owns — base data, `items()`,
+/// or `effects()` — so the stat table can always be rebuilt from scratch. That
+/// is why there is no way to push a modifier straight into a pipeline: such a
+/// modifier would have no owner and would silently vanish the next time
+/// anything changed. Temporary bonuses are effects; permanent gear is items.
+///
+/// Stats are recomputed lazily: mutating the champion marks the table dirty and
+/// the next read rebuilds it. Reads are const and cheap when nothing changed.
+class Champion {
+  public:
     std::string name;
     ResourceType resource_type = ResourceType::Mana;
     RangeType range_type = RangeType::Melee;
 
     Champion() = default;
 
-    /// Builds a champion from wiki data at the given `level`. Each stat's
-    /// pipeline is seeded with `base + growth*(level-1)` as a single Base
-    /// modifier.
-    Champion(const ChampionData& data, int level = 1);
+    /// Builds a champion from wiki data at the given `level`.
+    explicit Champion(const ChampionData& data, int level = 1);
 
-    /// Returns the pipeline for `stat`, so callers can add modifiers
-    /// (items, buffs) and inspect the result.
-    [[nodiscard]] StatPipeline& pipeline(StatId stat);
-    [[nodiscard]] const StatPipeline& pipeline(StatId stat) const;
+    // --- stats -------------------------------------------------------------
 
-    /// Returns the fully computed value of `stat` (Base * Inc * More).
+    /// Fully computed value of `stat` (Base * Inc * More), including items and
+    /// every live effect.
     [[nodiscard]] double compute(StatId stat) const;
 
-    /// Returns the provenance of `stat`: every contributing modifier labeled
-    /// with its source (champion base, item, ...), for debugging.
+    /// Provenance of `stat`: every contributing modifier labeled with its
+    /// source (champion base, item name, effect key), for debugging.
     [[nodiscard]] StatBreakdown explain(StatId stat) const;
 
-    /// Equips `item` on the champion: stores it and pushes every modifier
-    /// into the matching stat pipeline.
+    /// Read-only view of the resolved pipeline for `stat`.
+    [[nodiscard]] const StatPipeline& pipeline(StatId stat) const;
+
+    /// The whole resolved stat table.
+    [[nodiscard]] const StatTable& stats() const;
+
+    // --- level -------------------------------------------------------------
+
+    [[nodiscard]] int level() const { return level_; }
+
+    /// Sets the level and re-seeds base stats; items and effects survive.
+    void set_level(int level);
+
+    /// The wiki data this champion was built from.
+    [[nodiscard]] const ChampionData& data() const { return data_; }
+
+    // --- items -------------------------------------------------------------
+
+    /// Equips `item`; its modifiers are labeled with the item's name.
     void equip(const Item& item);
 
-    /// Removes the first item equal to `item` (by name) and rebuilds the
-    /// stat pipelines from the champion data and remaining items.
-    void unequip(const Item& item);
+    /// Removes the first item with the same name. Returns true if one was found.
+    bool unequip(const Item& item);
+    bool unequip(const std::string& item_name);
 
-    /// Returns the items currently equipped.
-    [[nodiscard]] const std::vector<Item>& items() const;
+    [[nodiscard]] const std::vector<Item>& items() const { return items_; }
+
+    // --- effects -----------------------------------------------------------
+
+    /// Applies `effect` at `now`, following its stack policy. Returns the live
+    /// instance's handle, or nullopt if the policy dropped the application.
+    std::optional<EffectHandle> apply_effect(Effect effect, Tick now);
+
+    /// Convenience overload using the champion's current time.
+    std::optional<EffectHandle> apply_effect(Effect effect);
+
+    /// Removes every effect with `key`. Returns how many went away.
+    std::size_t remove_effect(const EffectKey& key);
+
+    /// Removes one specific instance.
+    bool remove_effect(EffectHandle handle);
+
+    [[nodiscard]] const EffectSet& effects() const { return effects_; }
+
+    // --- time --------------------------------------------------------------
+
+    /// Advances simulation time to `now`, expiring finished effects. Returns
+    /// the keys that expired, so the caller can react to them.
+    ///
+    /// This is the champion's only mutating time step; reading stats never
+    /// changes anything, so stats can be queried as often as needed.
+    std::vector<EffectKey> advance_to(Tick now);
+
+    /// Advances by `span` from the current time.
+    std::vector<EffectKey> advance_by(TickSpan span);
+
+    [[nodiscard]] Tick now() const { return now_; }
+
+    /// Tick/second conversion used when effects ask for seconds.
+    [[nodiscard]] TickRate tick_rate() const { return rate_; }
+    void set_tick_rate(TickRate rate);
 
   private:
-    /// Resets every pipeline and seeds it with the champion's base stat
-    /// (base + growth*(level-1)) as a single labeled Base modifier.
-    void seed_pipelines();
-
-    /// One pipeline per StatId, indexed by stat_index().
-    std::array<StatPipeline, kStatCount> pipelines_;
-
-    std::vector<Item> items_;
+    /// Rebuilds the stat table from base data, then items, then effects.
+    void rebuild() const;
+    void invalidate() { dirty_ = true; }
 
     ChampionData data_;
     int level_ = 1;
+
+    std::vector<Item> items_;
+    EffectSet effects_;
+
+    Tick now_ = kSimulationStart;
+    TickRate rate_ = kDefaultTickRate;
+
+    // Derived state: a pure function of the members above.
+    mutable StatTable stats_;
+    mutable bool dirty_ = true;
 };
 
 } // namespace moba_sim

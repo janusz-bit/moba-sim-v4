@@ -15,7 +15,7 @@ direnv, `cmake` cannot find SDL3 or Catch2 and configure fails. Nix flake `syste
 
 ```sh
 cmake --build build                  # incremental build
-ctest --test-dir build               # all 38 tests
+ctest --test-dir build               # all 114 tests
 ctest --test-dir build -R "Vec2"     # filter by ctest test name (regex)
 ./build/tests/moba_sim_tests "[stats]"   # filter by Catch2 tag — ctest cannot
 nix build                            # full clean build; doCheck=true runs ctest
@@ -25,7 +25,11 @@ pre-commit run --all-files           # clang-format + nixfmt
 
 `catch_discover_tests` registers each `TEST_CASE` as its own ctest test named by the test
 case string. No ctest labels exist, so Catch2 tags (`[stats]`, `[champion]`, `[item]`,
-`[events]`) are only usable by invoking the test binary directly.
+`[effects]`, `[tick]`, `[events]`) are only usable by invoking the test binary directly.
+
+Nix builds from the **git tree**, so a new file that is not at least `git add`-ed is invisible
+to `nix build` / `nix flake check` and to the pre-commit hooks, even though the local
+`cmake --build build` succeeds. Stage new sources before running either.
 
 `nix fmt` formats **Nix files only** (`nixfmt-tree`). C++ formatting happens through the
 clang-format pre-commit hook, never `nix fmt`.
@@ -45,16 +49,20 @@ cmake -B /tmp/wbuild -G Ninja -DMOBA_SIM_WARNINGS_AS_ERRORS=ON && cmake --build 
 
 Two libraries, both with `src/` on the include path:
 
-- `moba_sim_core` — `stats/`, `champions/`, `items/`, `events/`. No SDL dependency.
+- `moba_sim_core` — `stats/`, `sim/`, `effects/`, `champions/`, `items/`, `events/`. No SDL
+  dependency, and none may be introduced: the simulation must stay headless.
 - `moba_sim_view` — `view/`. Links `SDL3::SDL3`.
 
-Executables: `moba-sim` (`src/main.cpp`, console event demo), `moba-sim-view`
+Executables: `moba-sim` (`src/main.cpp`, console stat + event demo), `moba-sim-view`
 (`src/view/demo.cpp`, SDL demo). Tests link both libraries.
 
 Sources are listed explicitly in `src/CMakeLists.txt` and `tests/CMakeLists.txt` — no
 globbing. A new `.cpp` must be added there or it is silently not compiled.
 
 Includes are always rooted at `src/`: `#include "stats/stat_pipeline.hpp"`. Never relative.
+
+See `docs/architecture.md` for the layer-by-layer design and the rationale behind the
+invariants below.
 
 ## Nix layout
 
@@ -69,18 +77,54 @@ Do not edit it. Change hooks via `pre-commit.settings.hooks` in `nix/default.nix
 
 `result = sum(Base) * (1 + sum(Inc)) * product(1 + More)`.
 
-Adding a `StatId` requires four coordinated edits, or you get silent corruption:
+Adding a `StatId` requires two edits, both enforced at compile time:
 
-1. the `StatId` enum (`src/stats/stat_id.hpp`)
-2. `kAllStats` in the same file — `kStatCount = kAllStats.size()` sizes
-   `Champion::pipelines_`, and `stat_index()` is a raw `static_cast` of the enum, so a
-   missing entry means out-of-bounds array access, not a compile error
-3. the `spec_for()` switch in `src/champions/champion.cpp` — it has no `default` and ends in
-   `std::unreachable()`, so a missing case is only a `-Wswitch` warning then UB at runtime
-4. a matching `<stat>` / `<stat>_growth` field pair on `ChampionData`
+1. the `StatId` enum (`src/stats/stat_id.hpp`), **before** the `Count` sentinel — `kStatCount`
+   and `kAllStats` are derived from `Count`, so they cannot fall out of sync
+2. an entry in `kStatNames` (same file) and in `kStatSpecs` (`src/champions/champion.cpp`),
+   plus the matching `<stat>` / `<stat>_growth` field pair on `ChampionData`
 
-`Champion::unequip` calls `seed_pipelines()` and replays the remaining items, so any
-modifier pushed directly through `Champion::pipeline(stat)` is **discarded** on unequip.
+Both tables carry a `static_assert` against `kStatCount`, so a forgotten entry is a compile
+error. Never `switch` over `StatId` and never store `StatId::Count` as a value.
+
+Every modifier reaching a pipeline goes through `apply_modifier` (`src/stats/modifier.hpp`) —
+the single mapping from `ModifierKind` to the `add_base/add_inc/add_more` overloads. Items,
+effects and base stats all use the one source-neutral `Modifier` type.
+
+`Champion` owns every modifier source (base data, `items()`, `effects()`) and rebuilds
+`StatTable` from them on demand, so there is deliberately **no** way to push a modifier
+straight into a pipeline: such a modifier would have no owner and would vanish on the next
+rebuild. Temporary bonuses are effects; permanent gear is items.
+
+Reading a stat is const and pure — the `mutable` cache in `Champion` is an optimisation, not
+state. Only `advance_to`/`advance_by`, `apply_effect`, `remove_effect`, `equip`, `unequip`
+and `set_level` mutate.
+
+## Simulation time
+
+Time is integral (`src/sim/tick.hpp`): `Tick` is a point, `TickSpan` a duration, `TickRate`
+the only seconds boundary. Never accumulate seconds as `double` in the core — expiry
+comparisons must be exact for replay to be reproducible and for tests to avoid epsilons.
+
+## Effects
+
+An `Effect` (`src/effects/effect.hpp`) declares as **data**: `key` (identity, drives
+stacking), `reads`/`writes` (`StatMask` dependency declarations), `lifetime`, `policy`. Only
+the arithmetic is a callable.
+
+Two phases with opposite requirements, deliberately separate:
+
+- `EffectSet::advance(now)` — mutating, once per step: expires effects, retires OneShots.
+- `EffectSet::contribute_all(table, now, rate)` — pure, callable any number of times.
+
+`contribute` **must not have side effects**: it runs on every stat rebuild. Anything that
+must happen once per step belongs in the advance phase.
+
+`reads`/`writes` must be complete: `StatView`/`ModifierSink` throw `UndeclaredStatAccess` on
+an undeclared access, because the single-pass ordering guarantee is only sound if the
+declarations are. Evaluation is one exact topological pass — no fixed-point iteration, no
+epsilon. Cycles are rejected by `EffectSet::apply` with `EffectCycleError`; an effect that
+reads a stat it also writes is layering, not a cycle, and is allowed.
 
 ## Events
 

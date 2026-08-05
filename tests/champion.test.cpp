@@ -116,16 +116,42 @@ TEST_CASE("Champion seeds pipelines at the given level", "[champion]") {
     // Level 5: 590 + 104 * 4 = 1006
     const Champion champ(ahri, 5);
     REQUIRE(champ.compute(StatId::Health) == 1006);
+    REQUIRE(champ.level() == 5);
 }
 
-TEST_CASE("Champion accepts Inc/More modifiers on top of seeded base", "[champion]") {
+TEST_CASE("Champion set_level re-seeds base stats and keeps items", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .health = 590, .health_growth = 104};
+    Champion champ(ahri);
+    champ.equip(Item{.name = "Ruby Crystal", .modifiers = {base_mod(StatId::Health, 150)}});
+
+    REQUIRE(champ.compute(StatId::Health) == 740);
+
+    champ.set_level(5);
+
+    // 1006 base + 150 from the still-equipped item.
+    REQUIRE(champ.compute(StatId::Health) == 1156);
+    REQUIRE(champ.items().size() == 1);
+}
+
+TEST_CASE("Champion level is clamped to at least 1", "[champion]") {
+    const ChampionData ahri{.name = "Ahri", .health = 590, .health_growth = 104};
+
+    const Champion champ(ahri, 0);
+    REQUIRE(champ.level() == 1);
+    REQUIRE(champ.compute(StatId::Health) == 590);
+}
+
+TEST_CASE("Champion accepts Inc/More effects on top of seeded base", "[champion]") {
     const ChampionData ahri{.name = "Ahri", .attack_damage = 53, .attack_damage_growth = 3};
 
     // Level 6 AD: 53 + 3 * 5 = 68. Add +10 AD (Base), +20% Inc, +10% More.
     Champion champ(ahri, 6);
-    champ.pipeline(StatId::AttackDamage).add_base(10);
-    champ.pipeline(StatId::AttackDamage).add_inc(0.2);
-    champ.pipeline(StatId::AttackDamage).add_more(0.1);
+    champ.apply_effect(
+        flat_effect({.source = "Test", .name = "Bonus"}, {
+                                                             base_mod(StatId::AttackDamage, 10),
+                                                             inc_mod(StatId::AttackDamage, 0.2),
+                                                             more_mod(StatId::AttackDamage, 0.1),
+                                                         }));
 
     // (68 + 10) * (1 + 0.2) * (1 + 0.1) = 78 * 1.2 * 1.1 = 102.96
     REQUIRE_THAT(champ.compute(StatId::AttackDamage), Catch::Matchers::WithinAbs(102.96, 1e-9));
@@ -134,8 +160,7 @@ TEST_CASE("Champion accepts Inc/More modifiers on top of seeded base", "[champio
 TEST_CASE("Champion equip applies item modifiers", "[champion]") {
     const ChampionData ahri{.name = "Ahri", .health = 590};
     Champion champ(ahri);
-    const Item ruby{.name = "Ruby Crystal",
-                    .modifiers = {{StatId::Health, ModifierKind::Base, 150}}};
+    const Item ruby{.name = "Ruby Crystal", .modifiers = {base_mod(StatId::Health, 150)}};
 
     champ.equip(ruby);
 
@@ -148,10 +173,8 @@ TEST_CASE("Champion equip applies item modifiers", "[champion]") {
 TEST_CASE("Champion equip stacks multiple items", "[champion]") {
     const ChampionData ahri{.name = "Ahri", .health = 590};
     Champion champ(ahri);
-    const Item ruby{.name = "Ruby Crystal",
-                    .modifiers = {{StatId::Health, ModifierKind::Base, 150}}};
-    const Item belt{.name = "Giant's Belt",
-                    .modifiers = {{StatId::Health, ModifierKind::Base, 380}}};
+    const Item ruby{.name = "Ruby Crystal", .modifiers = {base_mod(StatId::Health, 150)}};
+    const Item belt{.name = "Giant's Belt", .modifiers = {base_mod(StatId::Health, 380)}};
 
     champ.equip(ruby);
     champ.equip(belt);
@@ -164,16 +187,14 @@ TEST_CASE("Champion equip stacks multiple items", "[champion]") {
 TEST_CASE("Champion unequip removes item and rebuilds pipelines", "[champion]") {
     const ChampionData ahri{.name = "Ahri", .health = 590};
     Champion champ(ahri);
-    const Item ruby{.name = "Ruby Crystal",
-                    .modifiers = {{StatId::Health, ModifierKind::Base, 150}}};
-    const Item belt{.name = "Giant's Belt",
-                    .modifiers = {{StatId::Health, ModifierKind::Base, 380}}};
+    const Item ruby{.name = "Ruby Crystal", .modifiers = {base_mod(StatId::Health, 150)}};
+    const Item belt{.name = "Giant's Belt", .modifiers = {base_mod(StatId::Health, 380)}};
 
     champ.equip(ruby);
     champ.equip(belt);
     REQUIRE(champ.compute(StatId::Health) == 1120);
 
-    champ.unequip(ruby);
+    REQUIRE(champ.unequip(ruby));
 
     REQUIRE(champ.items().size() == 1);
     REQUIRE(champ.items()[0].name == "Giant's Belt");
@@ -184,20 +205,55 @@ TEST_CASE("Champion unequip removes item and rebuilds pipelines", "[champion]") 
 TEST_CASE("Champion unequip of absent item is a no-op", "[champion]") {
     const ChampionData ahri{.name = "Ahri", .health = 590};
     Champion champ(ahri);
-    const Item ruby{.name = "Ruby Crystal",
-                    .modifiers = {{StatId::Health, ModifierKind::Base, 150}}};
+    const Item ruby{.name = "Ruby Crystal", .modifiers = {base_mod(StatId::Health, 150)}};
     const Item other{.name = "Phantom", .modifiers = {}};
 
     champ.equip(ruby);
-    champ.unequip(other);
+    REQUIRE_FALSE(champ.unequip(other));
 
     REQUIRE(champ.items().size() == 1);
     REQUIRE(champ.compute(StatId::Health) == 740);
 }
 
-TEST_CASE("Champion starts with no items", "[champion]") {
+TEST_CASE("Champion unequip keeps active effects", "[champion]") {
+    // The old design rebuilt pipelines from items only, so any modifier that
+    // did not come from an item was silently dropped on unequip. Effects are a
+    // first-class source now, so they have to survive.
+    const ChampionData ahri{.name = "Ahri", .health = 590};
+    Champion champ(ahri);
+    champ.equip(Item{.name = "Ruby Crystal", .modifiers = {base_mod(StatId::Health, 150)}});
+    champ.apply_effect(
+        flat_effect({.source = "Baron", .name = "Hand of Baron"}, {base_mod(StatId::Health, 300)}));
+
+    REQUIRE(champ.compute(StatId::Health) == 1040);
+
+    champ.unequip("Ruby Crystal");
+
+    // 590 base + 300 from the buff; only the item went away.
+    REQUIRE(champ.compute(StatId::Health) == 890);
+    REQUIRE(champ.effects().size() == 1);
+}
+
+TEST_CASE("Champion starts with no items and no effects", "[champion]") {
     const ChampionData ahri{.name = "Ahri", .health = 590};
     const Champion champ(ahri);
 
     REQUIRE(champ.items().empty());
+    REQUIRE(champ.effects().empty());
+    REQUIRE(champ.now() == kSimulationStart);
+}
+
+TEST_CASE("Champion stats are stable across repeated reads", "[champion]") {
+    // Reading stats must be pure: the lazy rebuild is an optimisation, not a
+    // state change, so the tenth read has to equal the first.
+    const ChampionData ahri{.name = "Ahri", .attack_damage = 100};
+    Champion champ(ahri);
+    champ.apply_effect(
+        flat_effect({.source = "Test", .name = "Amp"}, {inc_mod(StatId::AttackDamage, 0.5)}));
+
+    const double first = champ.compute(StatId::AttackDamage);
+    for (int i = 0; i < 10; ++i) {
+        REQUIRE(champ.compute(StatId::AttackDamage) == first);
+    }
+    REQUIRE(first == 150.0);
 }

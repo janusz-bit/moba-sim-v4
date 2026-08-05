@@ -10,9 +10,16 @@ visualization.
   `sum(Base) * (1 + sum(Inc)) * product(More)` (Path-of-Exile-style buckets).
   Each modifier carries a source label, so `breakdown()` can explain exactly
   where a final number came from.
+- **Simulation time** (`src/sim/`) — integral ticks (`Tick`, `TickSpan`,
+  `TickRate`). Durations are exact, so expiry is reproducible and never drifts.
+- **Effects** (`src/effects/`) — buffs, debuffs, auras and item passives.
+  Identity, dependencies, lifetime and stacking behaviour are **data**, so the
+  framework can refresh, extend, stack, dispel and report time remaining, and
+  evaluate everything in one exact dependency-ordered pass — no fixed-point
+  iteration and no convergence tolerance.
 - **Champions** (`src/champions/`) — base stats + per-level growth in the
-  [LoL wiki format](https://wiki.leagueoflegends.com/en-us/Ahri); each stat is
-  a pipeline seeded at a given level, ready for item/buff modifiers.
+  [LoL wiki format](https://wiki.leagueoflegends.com/en-us/Ahri), resolved
+  together with items and effects into one stat table.
 - **Items** (`src/items/`) — named collections of stat modifiers that can be
   equipped and unequipped.
 - **Events** (`src/events/`) — `std::variant`-based events with recursive
@@ -21,12 +28,15 @@ visualization.
   fixed-timestep game loop
   (["Fix Your Timestep"](https://gafferongames.com/post/fix_your_timestep/)).
 
+See [`docs/architecture.md`](docs/architecture.md) for the design and the
+reasoning behind it.
+
 ## Binaries
 
 | Target | Description |
 |---|---|
-| `moba-sim` | Console demo of the recursive event system. |
-| `moba-sim-view` | Interactive SDL3 demo: move a champion with WASD; movement speed comes live from the stat pipeline. Press TAB to print a stat breakdown, Escape to quit. |
+| `moba-sim` | Console demo: a champion with items and effects, stat breakdowns, a buff expiring over simulated time, and the recursive event system. |
+| `moba-sim-view` | Interactive SDL3 demo: move a champion with WASD; movement speed comes live from the stat pipeline. SPACE applies a 3-second haste buff that expires on its own, TAB prints a stat breakdown, Escape quits. |
 | `moba_sim_tests` | Catch2 test suite. |
 
 ## Building

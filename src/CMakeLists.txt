@@ -1,10 +1,14 @@
 add_library(moba_sim_core
     champions/champion.cpp
+    effects/effect.cpp
+    effects/effect_set.cpp
+    effects/lifetime.cpp
     events/event.cpp
     events/event_sequence.cpp
     events/key_pressed_event.cpp
     events/player_died_event.cpp
     items/item.cpp
+    stats/modifier.cpp
     stats/stat_breakdown.cpp
     stats/stat_pipeline.cpp
 )
