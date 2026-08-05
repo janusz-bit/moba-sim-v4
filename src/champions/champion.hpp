@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -100,16 +101,12 @@ struct Champion {
     [[nodiscard]] const std::vector<Item>& items() const;
 
   private:
-    StatPipeline health_;
-    StatPipeline health_regen_;
-    StatPipeline resource_;
-    StatPipeline resource_regen_;
-    StatPipeline attack_damage_;
-    StatPipeline attack_speed_;
-    StatPipeline armor_;
-    StatPipeline magic_resist_;
-    StatPipeline movement_speed_;
-    StatPipeline attack_range_;
+    /// Resets every pipeline and seeds it with the champion's base stat
+    /// (base + growth*(level-1)) as a single labeled Base modifier.
+    void seed_pipelines();
+
+    /// One pipeline per StatId, indexed by stat_index().
+    std::array<StatPipeline, kStatCount> pipelines_;
 
     std::vector<Item> items_;
 
