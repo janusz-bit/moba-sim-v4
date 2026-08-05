@@ -1,5 +1,5 @@
 {
-  description = "";
+  description = "MOBA simulator in C++23: champions, items, stat pipelines and an SDL3 view";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
