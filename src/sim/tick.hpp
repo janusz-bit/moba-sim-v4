@@ -20,27 +20,37 @@ namespace moba_sim {
 /// A duration in ticks. Signed, so `a - b` is always meaningful.
 class TickSpan {
   public:
-    using Rep = std::int64_t;
+    using Rep = std::int64_t; ///< Underlying integer representation.
 
     constexpr TickSpan() = default;
+    /// Constructs a span of `ticks`. Explicit, so a bare integer is never
+    /// silently a duration.
     constexpr explicit TickSpan(Rep ticks) : ticks_(ticks) {}
 
+    /// The number of ticks in this span.
     [[nodiscard]] constexpr Rep count() const { return ticks_; }
 
+    /// Orders and compares spans by length.
     [[nodiscard]] constexpr auto operator<=>(const TickSpan&) const = default;
+    /// Exact equality; integral ticks need no tolerance.
     [[nodiscard]] constexpr bool operator==(const TickSpan&) const = default;
 
+    /// Sum of two durations.
     [[nodiscard]] constexpr TickSpan operator+(TickSpan other) const {
         return TickSpan{ticks_ + other.ticks_};
     }
+    /// Difference of two durations; may be negative.
     [[nodiscard]] constexpr TickSpan operator-(TickSpan other) const {
         return TickSpan{ticks_ - other.ticks_};
     }
+    /// Repeats this duration `factor` times.
     [[nodiscard]] constexpr TickSpan operator*(Rep factor) const {
         return TickSpan{ticks_ * factor};
     }
+    /// Negation, for stepping backwards.
     [[nodiscard]] constexpr TickSpan operator-() const { return TickSpan{-ticks_}; }
 
+    /// Extends this duration by `other`.
     constexpr TickSpan& operator+=(TickSpan other) {
         ticks_ += other.ticks_;
         return *this;
@@ -53,19 +63,27 @@ class TickSpan {
 /// A point in simulation time: ticks elapsed since the simulation started.
 class Tick {
   public:
-    using Rep = std::int64_t;
+    using Rep = std::int64_t; ///< Underlying integer representation.
 
     constexpr Tick() = default;
+    /// Constructs the point `value` ticks after the start. Explicit, so a bare
+    /// integer is never silently a point in time.
     constexpr explicit Tick(Rep value) : value_(value) {}
 
+    /// Ticks elapsed since the simulation started.
     [[nodiscard]] constexpr Rep value() const { return value_; }
 
+    /// Orders points chronologically. This is the comparison that makes expiry
+    /// exact: `now >= expires_at` never drifts.
     [[nodiscard]] constexpr auto operator<=>(const Tick&) const = default;
+    /// Exact equality; integral ticks need no tolerance.
     [[nodiscard]] constexpr bool operator==(const Tick&) const = default;
 
+    /// The point `span` later than this one.
     [[nodiscard]] constexpr Tick operator+(TickSpan span) const {
         return Tick{value_ + span.count()};
     }
+    /// The point `span` earlier than this one.
     [[nodiscard]] constexpr Tick operator-(TickSpan span) const {
         return Tick{value_ - span.count()};
     }
@@ -74,10 +92,12 @@ class Tick {
         return TickSpan{value_ - other.value_};
     }
 
+    /// Advances this point by `span`.
     constexpr Tick& operator+=(TickSpan span) {
         value_ += span.count();
         return *this;
     }
+    /// Advances this point by exactly one tick.
     constexpr Tick& operator++() {
         ++value_;
         return *this;
@@ -99,6 +119,7 @@ class TickRate {
     constexpr explicit TickRate(int ticks_per_second)
         : per_second_(ticks_per_second > 0 ? ticks_per_second : 1) {}
 
+    /// Ticks per second, i.e. the simulation's fixed step rate.
     [[nodiscard]] constexpr int per_second() const { return per_second_; }
 
     /// Length of one tick in seconds — the fixed dt of the simulation.
@@ -115,6 +136,7 @@ class TickRate {
         return static_cast<double>(span.count()) / per_second_;
     }
 
+    /// Seconds elapsed at `tick`, counting from the simulation start.
     [[nodiscard]] constexpr double seconds_at(Tick tick) const {
         return static_cast<double>(tick.value()) / per_second_;
     }

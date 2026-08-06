@@ -12,6 +12,7 @@ namespace moba_sim::view {
 /// ends with present().
 class Renderer2D {
   public:
+    /// Wraps an existing SDL renderer, which must outlive this object.
     explicit Renderer2D(SDL_Renderer* renderer) : renderer_{renderer} {}
 
     /// Fills the whole backbuffer with `color`.

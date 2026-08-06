@@ -28,8 +28,10 @@ struct Permanent {};
 /// Expires at a fixed point in time. Constructed from a start tick and a
 /// duration so `expires_at` is computed once, at application time.
 struct Timed {
-    Tick expires_at{};
+    Tick expires_at{}; ///< The tick at which the effect stops being alive.
 
+    /// Builds a lifetime ending `duration` after `now`, so the deadline is
+    /// computed once, at application time.
     [[nodiscard]] static Timed for_span(Tick now, TickSpan duration) {
         return Timed{now + duration};
     }

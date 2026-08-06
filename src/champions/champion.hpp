@@ -32,34 +32,34 @@ enum class RangeType {
 /// value at level 1 + growth added on each level-up.
 /// See e.g. https://wiki.leagueoflegends.com/en-us/Ahri ("Base statistics").
 struct ChampionData {
-    std::string name{};
+    std::string name{}; ///< Champion name, used to label base-stat provenance.
 
-    ResourceType resource_type = ResourceType::Mana;
-    RangeType range_type = RangeType::Melee;
+    ResourceType resource_type = ResourceType::Mana; ///< Which resource bar abilities use.
+    RangeType range_type = RangeType::Melee;         ///< Melee or ranged.
 
     // Base stats (level 1)
-    double health = 0.0;         // HP
-    double health_regen = 0.0;   // HP5, per 5 seconds
-    double resource = 0.0;       // MP (mana / energy / ...)
-    double resource_regen = 0.0; // MP5, per 5 seconds
-    double attack_damage = 0.0;  // AD
-    double attack_speed = 0.0;   // attacks per second
-    double armor = 0.0;          // AR
-    double magic_resist = 0.0;   // MR
-    double movement_speed = 0.0; // MS
-    double attack_range = 0.0;   // in game units
+    double health = 0.0;         ///< HP at level 1.
+    double health_regen = 0.0;   ///< HP5, per 5 seconds.
+    double resource = 0.0;       ///< MP (mana / energy / ...) at level 1.
+    double resource_regen = 0.0; ///< MP5, per 5 seconds.
+    double attack_damage = 0.0;  ///< AD at level 1.
+    double attack_speed = 0.0;   ///< Attacks per second at level 1.
+    double armor = 0.0;          ///< AR at level 1.
+    double magic_resist = 0.0;   ///< MR at level 1.
+    double movement_speed = 0.0; ///< MS at level 1.
+    double attack_range = 0.0;   ///< Attack range in game units.
 
-    // Per-level growth
-    double health_growth = 0.0;
-    double health_regen_growth = 0.0;
-    double resource_growth = 0.0;
-    double resource_regen_growth = 0.0;
-    double attack_damage_growth = 0.0;
-    double attack_speed_growth = 0.0; // in % of base attack speed
-    double armor_growth = 0.0;
-    double magic_resist_growth = 0.0;
-    double movement_speed_growth = 0.0;
-    double attack_range_growth = 0.0;
+    // Per-level growth, added (level - 1) times by base_value().
+    double health_growth = 0.0;         ///< HP gained per level.
+    double health_regen_growth = 0.0;   ///< HP5 gained per level.
+    double resource_growth = 0.0;       ///< MP gained per level.
+    double resource_regen_growth = 0.0; ///< MP5 gained per level.
+    double attack_damage_growth = 0.0;  ///< AD gained per level.
+    double attack_speed_growth = 0.0;   ///< In % of base attack speed, per level.
+    double armor_growth = 0.0;          ///< AR gained per level.
+    double magic_resist_growth = 0.0;   ///< MR gained per level.
+    double movement_speed_growth = 0.0; ///< MS gained per level.
+    double attack_range_growth = 0.0;   ///< Attack range gained per level.
 
     /// Returns the base value for `stat` at the given `level`
     /// (base + growth * (level - 1)). At level 1 this is just the base value.
@@ -79,10 +79,11 @@ struct ChampionData {
 /// the next read rebuilds it. Reads are const and cheap when nothing changed.
 class Champion {
   public:
-    std::string name;
-    ResourceType resource_type = ResourceType::Mana;
-    RangeType range_type = RangeType::Melee;
+    std::string name;                                ///< Champion name.
+    ResourceType resource_type = ResourceType::Mana; ///< Which resource bar abilities use.
+    RangeType range_type = RangeType::Melee;         ///< Melee or ranged.
 
+    /// Builds an empty champion with no stats; mainly for containers.
     Champion() = default;
 
     /// Builds a champion from wiki data at the given `level`.
@@ -106,6 +107,7 @@ class Champion {
 
     // --- level -------------------------------------------------------------
 
+    /// The champion's current level.
     [[nodiscard]] int level() const { return level_; }
 
     /// Sets the level and re-seeds base stats; items and effects survive.
@@ -121,8 +123,10 @@ class Champion {
 
     /// Removes the first item with the same name. Returns true if one was found.
     bool unequip(const Item& item);
+    /// Removes the first item named `item_name`. Returns true if one was found.
     bool unequip(const std::string& item_name);
 
+    /// The items currently equipped, in equip order.
     [[nodiscard]] const std::vector<Item>& items() const { return items_; }
 
     // --- effects -----------------------------------------------------------
@@ -140,6 +144,7 @@ class Champion {
     /// Removes one specific instance.
     bool remove_effect(EffectHandle handle);
 
+    /// The live effects, for querying stacks and remaining durations.
     [[nodiscard]] const EffectSet& effects() const { return effects_; }
 
     // --- time --------------------------------------------------------------
@@ -154,10 +159,12 @@ class Champion {
     /// Advances by `span` from the current time.
     std::vector<EffectKey> advance_by(TickSpan span);
 
+    /// The champion's current point in simulation time.
     [[nodiscard]] Tick now() const { return now_; }
 
     /// Tick/second conversion used when effects ask for seconds.
     [[nodiscard]] TickRate tick_rate() const { return rate_; }
+    /// Sets the tick rate; invalidates the cached stats.
     void set_tick_rate(TickRate rate);
 
   private:

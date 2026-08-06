@@ -1,0 +1,107 @@
+# Doxygen configuration, templated by CMake (docs/CMakeLists.txt substitutes
+# the @VAR@ placeholders). Only settings that differ from the defaults are
+# listed, so this file stays readable and survives a doxygen upgrade.
+
+PROJECT_NAME           = "@PROJECT_NAME@"
+PROJECT_NUMBER         = "@PROJECT_VERSION@"
+PROJECT_BRIEF          = "@PROJECT_DESCRIPTION@"
+
+OUTPUT_DIRECTORY       = "@DOXYGEN_OUTPUT_DIR@"
+
+# The prose docs are part of the same navigation as the API reference, so the
+# README's link to architecture.md resolves instead of dangling. Their GitHub
+# anchors survive thanks to MARKDOWN_ID_STYLE below.
+INPUT                  = "@DOXYGEN_INPUT_SRC@" \
+                         "@DOXYGEN_INPUT_README@" \
+                         @DOXYGEN_INPUT_DOCS@
+FILE_PATTERNS          = *.hpp *.cpp *.md
+RECURSIVE              = YES
+
+# Never re-parse generated output on a rebuild.
+EXCLUDE                = "@DOXYGEN_OUTPUT_DIR@"
+
+# Paths in the output are relative to the repo root rather than absolute build
+# paths, which keeps generated HTML identical between machines.
+STRIP_FROM_PATH        = "@DOXYGEN_STRIP_PATH@"
+STRIP_FROM_INC_PATH    = "@DOXYGEN_STRIP_PATH@"
+
+# The README becomes the landing page.
+USE_MDFILE_AS_MAINPAGE = "@DOXYGEN_INPUT_README@"
+
+# --- what gets extracted ----------------------------------------------------
+#
+# EXTRACT_ALL stays OFF on purpose. With it on, every undocumented entity is
+# published as an empty stub and WARN_IF_UNDOCUMENTED goes quiet -- the docs
+# look complete while saying nothing. Off, the warning list doubles as a
+# to-do list of public API that still needs a `///`.
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+
+# Private members are excluded above, but their *documentation* is often the
+# rationale for a design (see Champion's mutable cache), so the class-level
+# comments that reference them must still resolve.
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+
+# --- warnings ---------------------------------------------------------------
+
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_IF_INCOMPLETE_DOC = YES
+WARN_NO_PARAMDOC       = NO
+WARN_AS_ERROR          = @DOXYGEN_WARN_AS_ERROR@
+
+# --- C++ specifics ----------------------------------------------------------
+
+BUILTIN_STL_SUPPORT    = YES
+SORT_MEMBER_DOCS       = NO
+SORT_BRIEF_DOCS        = NO
+
+# `///` comments here are written as prose, with the first sentence acting as
+# the summary.
+JAVADOC_AUTOBRIEF      = YES
+MARKDOWN_SUPPORT       = YES
+
+# Heading anchors follow GitHub's slug rules, so the same `#section-name`
+# links work both on GitHub and in the generated HTML.
+MARKDOWN_ID_STYLE      = GITHUB
+
+# Definitions that only exist to make the build work must not shape the docs.
+PREDEFINED             = __cplusplus=202302L
+
+# --- output -----------------------------------------------------------------
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HTML_OUTPUT            = html
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+HTML_COLORSTYLE        = TOGGLE
+
+# Source browsing matters more than usual here: the interesting parts of this
+# codebase are the invariants in the implementation comments.
+SOURCE_BROWSER         = YES
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+# --- diagrams ---------------------------------------------------------------
+#
+# HAVE_DOT is switched by CMake depending on whether graphviz was found, so a
+# missing dot degrades to no diagrams instead of a broken build.
+HAVE_DOT               = @DOXYGEN_HAVE_DOT@
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = NO
+COLLABORATION_GRAPH    = YES
+TEMPLATE_RELATIONS     = YES
+DOT_GRAPH_MAX_NODES    = 60
+
+NUM_PROC_THREADS       = 0

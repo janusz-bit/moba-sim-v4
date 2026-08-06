@@ -16,8 +16,8 @@ namespace moba_sim {
 /// equipped; set it explicitly to attribute a single line to something more
 /// specific (e.g. "Zeal (passive)").
 struct Item {
-    std::string name{};
-    std::vector<Modifier> modifiers{};
+    std::string name{};                ///< Item name; labels its modifiers.
+    std::vector<Modifier> modifiers{}; ///< The stat changes this item grants.
 
     /// Returns the modifiers this item grants for the given stat.
     [[nodiscard]] std::vector<Modifier> modifiers_for(StatId stat) const;

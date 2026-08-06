@@ -16,7 +16,9 @@ namespace moba_sim {
 /// operate on stats without knowing what owns them.
 class StatTable {
   public:
+    /// Mutable pipeline for `stat`, for seeding and contributing.
     [[nodiscard]] StatPipeline& operator[](StatId stat) { return pipelines_[stat_index(stat)]; }
+    /// Read-only pipeline for `stat`.
     [[nodiscard]] const StatPipeline& operator[](StatId stat) const {
         return pipelines_[stat_index(stat)];
     }

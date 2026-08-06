@@ -13,18 +13,18 @@ namespace moba_sim {
 struct StatBreakdown {
     /// A single labeled contribution to a stat.
     struct Entry {
-        double value = 0.0;
-        std::string source; // where the number came from, e.g. "B.F. Sword"
+        double value = 0.0; ///< The contributed amount.
+        std::string source; ///< Where the number came from, e.g. "B.F. Sword".
     };
 
-    std::vector<Entry> base;
-    std::vector<Entry> inc;
-    std::vector<Entry> more;
+    std::vector<Entry> base; ///< Base contributions, in application order.
+    std::vector<Entry> inc;  ///< Inc contributions, in application order.
+    std::vector<Entry> more; ///< More contributions, in application order.
 
-    double base_total = 0.0;      // sum(Base)
-    double inc_multiplier = 1.0;  // 1 + sum(Inc)
-    double more_multiplier = 1.0; // product(1 + More)
-    double total = 0.0;           // base_total * inc_multiplier * more_multiplier
+    double base_total = 0.0;      ///< sum(Base)
+    double inc_multiplier = 1.0;  ///< 1 + sum(Inc)
+    double more_multiplier = 1.0; ///< product(1 + More)
+    double total = 0.0;           ///< base_total * inc_multiplier * more_multiplier
 };
 
 /// Renders the breakdown as a human-readable report showing where each

@@ -13,6 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(MOBA_SIM_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+option(MOBA_SIM_BUILD_DOCS "Build API documentation as part of the default target" OFF)
 
 # Shared warning flags for all targets
 add_library(project_warnings INTERFACE)
@@ -29,6 +30,7 @@ if(MOBA_SIM_WARNINGS_AS_ERRORS)
 endif()
 
 add_subdirectory(src)
+add_subdirectory(docs)
 
 include(CTest)
 if(BUILD_TESTING)

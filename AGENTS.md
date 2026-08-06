@@ -29,13 +29,15 @@ pre-commit run --all-files           # clang-format + nixfmt
 nix run .#tests                      # whole Catch2 suite
 nix run .#tests -- "[effects]"       # args pass through to Catch2
 nix run .#moba-sim-view              # SDL demo
+nix run .#docs                       # generate the API reference, print its path
 nix run .                            # console demo (= .#moba-sim)
 ```
 
-Apps are defined in `nix/default.nix`. Each is a `writeShellApplication` wrapper
-rather than a bare `program` path, because `nix run` accepts only an executable — a wrapper
-is the only way to set an env var (`.#tests` forces `SDL_VIDEO_DRIVER=dummy`, since
-`game_loop.test.cpp` opens a window) while still forwarding `"$@"`.
+Apps are defined in `nix/default.nix`. `.#moba-sim` and `.#moba-sim-view` point straight at
+the installed binaries; `.#tests` and `.#docs` go through a `writeShellApplication` wrapper,
+because `nix run` accepts only an executable and a wrapper is the only way to set an env var
+(`.#tests` forces `SDL_VIDEO_DRIVER=dummy`, since `game_loop.test.cpp` opens a window) while
+still forwarding `"$@"`.
 
 `packages.default` has two outputs: `out` (both binaries) and `tests` (the Catch2 binary,
 installed by `postInstall` from the same build). The test binary is a separate CMake
@@ -170,6 +172,34 @@ same, since the environment is not set globally by ctest or the Nix build.
 
 Champion tests use real League of Legends wiki numbers (Ahri) with expected values worked out
 in comments — keep that pattern when extending them.
+
+## API documentation
+
+Doxygen renders the `///` comments into an HTML reference. Two ways in:
+
+```sh
+nix run .#docs                                   # build + print the index path
+cmake --build build --target docs                # in a dev shell; output in build/docs/html
+```
+
+The `docs` target only exists when Doxygen is installed, so a plain
+`cmake --build build` never depends on it; the dev shell provides `doxygen` and `graphviz`.
+
+`EXTRACT_ALL` is **off** on purpose. With it on, every undocumented entity is published as an
+empty stub and `WARN_IF_UNDOCUMENTED` goes quiet — the reference looks complete while saying
+nothing. Off, Doxygen's warning list is the list of public API still missing a `///`, which
+is what keeps the "public API carries `///` doc comments" convention below enforceable
+rather than aspirational.
+
+`nix build .#docs` (and `nix flake check`) sets `MOBA_SIM_DOCS_WARNINGS_AS_ERRORS=ON`, so
+**adding an undocumented public member fails CI**. Locally it is only a warning, mirroring
+how `MOBA_SIM_WARNINGS_AS_ERRORS` treats compiler warnings. Document members inline with
+`///< ...` and types with a `///` block above them.
+
+`docs/architecture.md` and `AGENTS.md` are part of the Doxygen `INPUT`, so cross-links
+between them and the README resolve in the generated HTML. `MARKDOWN_ID_STYLE = GITHUB`
+makes heading anchors match GitHub's slugs, so `#section-name` links work in both places —
+do not "fix" those links into Doxygen `\ref` syntax, since that breaks them on GitHub.
 
 ## Conventions
 

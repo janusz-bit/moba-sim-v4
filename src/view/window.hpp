@@ -12,6 +12,8 @@ namespace moba_sim::view {
 /// std::runtime_error if initialization fails.
 class Window {
   public:
+    /// Opens a window of `width` x `height` titled `title`, initialising SDL
+    /// video. Throws std::runtime_error if that fails.
     Window(std::string_view title, int width, int height);
     ~Window();
 
@@ -25,6 +27,7 @@ class Window {
 
     /// Returns the current window size in pixels.
     [[nodiscard]] int width() const;
+    /// Current window height in pixels.
     [[nodiscard]] int height() const;
 
   private:

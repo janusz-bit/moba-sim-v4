@@ -33,10 +33,10 @@ enum class ModifierKind {
 /// Keeping one modifier type for every source is what lets Champion replay
 /// its whole modifier set from the sources it owns (see Champion::rebuild).
 struct Modifier {
-    StatId stat{};
-    ModifierKind kind = ModifierKind::Base;
-    double value = 0.0;
-    std::string source{};
+    StatId stat{};                          ///< Which stat this changes.
+    ModifierKind kind = ModifierKind::Base; ///< Which bucket it lands in.
+    double value = 0.0;                     ///< The amount; a fraction for Inc/More.
+    std::string source{};                   ///< Provenance label for breakdowns.
 };
 
 /// Convenience constructors. They exist so call sites read as

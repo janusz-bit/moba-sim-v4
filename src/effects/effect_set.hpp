@@ -22,6 +22,7 @@ namespace moba_sim {
 /// value accumulated so far.
 class EffectCycleError : public std::logic_error {
   public:
+    /// `detail` names the effects that could not be ordered.
     explicit EffectCycleError(const std::string& detail)
         : std::logic_error("circular effect dependency: " + detail) {}
 };
@@ -37,10 +38,10 @@ enum class EffectHandle : std::uint64_t {};
 
 /// A live effect: the effect itself plus the runtime state the framework owns.
 struct EffectInstance {
-    EffectHandle handle{};
-    Effect effect{};
-    StackCount stacks = 1;
-    Tick applied_at{};
+    EffectHandle handle{}; ///< Identifies this instance within its EffectSet.
+    Effect effect{};       ///< The effect itself, as applied.
+    StackCount stacks = 1; ///< Intensity stacks; scales the contribution.
+    Tick applied_at{};     ///< When it was applied; retires OneShots.
 };
 
 /// The set of effects on one unit, and the thing that turns them into stats.
@@ -99,7 +100,9 @@ class EffectSet {
     /// Evaluation order as indices into instances(), for debugging and tests.
     [[nodiscard]] const std::vector<std::size_t>& evaluation_order() const;
 
+    /// True when no effect is live.
     [[nodiscard]] bool empty() const { return instances_.empty(); }
+    /// Number of live effect instances.
     [[nodiscard]] std::size_t size() const { return instances_.size(); }
 
     /// The first live instance with `key`, or nullptr.

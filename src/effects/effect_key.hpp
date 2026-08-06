@@ -18,10 +18,12 @@ namespace moba_sim {
 /// hand, and reproducible across runs — a prerequisite for deterministic
 /// replay.
 struct EffectKey {
-    std::string source{}; // who applied it: "Ahri", "Sheen", "Baron"
-    std::string name{};   // which effect: "Essence Theft", "Spellblade"
+    std::string source{}; ///< Who applied it: "Ahri", "Sheen", "Baron".
+    std::string name{};   ///< Which effect: "Essence Theft", "Spellblade".
 
+    /// Orders keys, so effects can live in sorted containers.
     [[nodiscard]] friend auto operator<=>(const EffectKey&, const EffectKey&) = default;
+    /// Equality is what drives stacking: the same key means the same effect.
     [[nodiscard]] friend bool operator==(const EffectKey&, const EffectKey&) = default;
 
     /// Provenance label used in stat breakdowns, e.g. "Sheen (Spellblade)".

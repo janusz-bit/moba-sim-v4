@@ -18,7 +18,9 @@ namespace moba_sim::view {
 /// closed, or Escape is pressed.
 class GameLoop {
   public:
+    /// Simulation step, called with a constant `dt` in seconds.
     using UpdateFn = std::function<void(double dt)>;
+    /// Frame draw, called once per rendered frame.
     using RenderFn = std::function<void(Renderer2D& renderer)>;
 
     /// Creates the window and renderer. `ticks_per_second` is the fixed
@@ -37,6 +39,7 @@ class GameLoop {
     /// Current window size in pixels (useful for keeping the simulation in
     /// bounds).
     [[nodiscard]] int width() const { return window_.width(); }
+    /// Window height in pixels.
     [[nodiscard]] int height() const { return window_.height(); }
 
   private:

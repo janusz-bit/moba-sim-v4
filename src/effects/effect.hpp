@@ -24,11 +24,13 @@ namespace moba_sim {
 /// complete, so an undeclared access is a hard error, not a warning.
 class UndeclaredStatAccess : public std::logic_error {
   public:
+    /// `access` is a verb for the message, e.g. "read" or "writes".
     UndeclaredStatAccess(const EffectKey& key, StatId stat, const char* access)
         : std::logic_error(std::string{"effect '"} + key.label() + "' " + access +
                            " undeclared stat " + std::string{stat_name(stat)}),
           stat_(stat) {}
 
+    /// The stat whose undeclared access triggered this.
     [[nodiscard]] StatId stat() const { return stat_; }
 
   private:
@@ -46,12 +48,15 @@ class UndeclaredStatAccess : public std::logic_error {
 /// system needs no convergence loop.
 class StatView {
   public:
+    /// Binds a view over `table` restricted to `reads`; `key` names the effect
+    /// in error messages. All three must outlive the view.
     StatView(const StatTable& table, const StatMask& reads, const EffectKey& key)
         : table_(&table), reads_(&reads), key_(&key) {}
 
     /// Value of `stat`. Throws UndeclaredStatAccess if `stat` is not in the
     /// effect's `reads` mask.
     [[nodiscard]] double operator()(StatId stat) const { return get(stat); }
+    /// Value of `stat`. Throws UndeclaredStatAccess if it was not declared.
     [[nodiscard]] double get(StatId stat) const {
         if (!reads_->contains(stat)) {
             throw UndeclaredStatAccess{*key_, stat, "read"};
@@ -70,6 +75,8 @@ class StatView {
 /// scaled by its current stack count.
 class ModifierSink {
   public:
+    /// Binds a sink over `table` restricted to `writes`; `key` labels the
+    /// modifiers and `stacks` scales them. All must outlive the sink.
     ModifierSink(StatTable& table, const StatMask& writes, const EffectKey& key, StackCount stacks)
         : table_(&table), writes_(&writes), key_(&key), stacks_(stacks) {}
 
@@ -105,10 +112,10 @@ class ModifierSink {
 
 /// Everything an effect is allowed to know while contributing.
 struct EffectContext {
-    StatView stats; // declared reads only
-    Tick now;       // current simulation time
-    TickRate rate;  // for effects that think in seconds
-    StackCount stacks = 1;
+    StatView stats;        ///< Declared reads only; throws on anything else.
+    Tick now;              ///< Current simulation time.
+    TickRate rate;         ///< For effects that reason in seconds.
+    StackCount stacks = 1; ///< Current stack count, already applied by the sink.
 };
 
 /// A stat-modifying effect: buff, debuff, aura, item passive.
@@ -134,11 +141,11 @@ struct EffectContext {
 /// stats are recomputed. Anything that happens once per step belongs in the
 /// advance phase (EffectSet::advance).
 struct Effect {
-    EffectKey key{};
-    StatMask reads{};  // stats contribute() may query — must be complete
-    StatMask writes{}; // stats contribute() may modify — must be complete
-    Lifetime lifetime = Permanent{};
-    StackPolicy policy = StackPolicy::Refresh;
+    EffectKey key{};                 ///< Stable identity; drives stacking and labelling.
+    StatMask reads{};                ///< Stats contribute() may query — must be complete.
+    StatMask writes{};               ///< Stats contribute() may modify — must be complete.
+    Lifetime lifetime = Permanent{}; ///< When the effect ends.
+    StackPolicy policy = StackPolicy::Refresh; ///< How re-application resolves.
 
     /// Compared by ReplaceIfStronger; also a convenient place to keep the
     /// effect's headline number so `contribute` can stay generic.
