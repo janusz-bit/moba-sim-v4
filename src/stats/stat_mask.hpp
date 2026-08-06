@@ -15,6 +15,7 @@ namespace moba_sim {
 /// a silently wrong number (see StatView).
 class StatMask {
   public:
+    /// An empty mask containing no stats.
     StatMask() = default;
 
     /// Builds a mask from a stat list: `StatMask{StatId::AttackDamage}`.

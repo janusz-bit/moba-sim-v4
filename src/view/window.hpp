@@ -15,11 +15,16 @@ class Window {
     /// Opens a window of `width` x `height` titled `title`, initialising SDL
     /// video. Throws std::runtime_error if that fails.
     Window(std::string_view title, int width, int height);
+    /// Releases the window and renderer and shuts down SDL video.
     ~Window();
 
+    /// Non-copyable: the window is a unique resource.
     Window(const Window&) = delete;
+    /// Non-copyable: the window is a unique resource.
     Window& operator=(const Window&) = delete;
+    /// Non-movable: the window is a unique resource.
     Window(Window&&) = delete;
+    /// Non-movable: the window is a unique resource.
     Window& operator=(Window&&) = delete;
 
     /// Returns the underlying SDL renderer.

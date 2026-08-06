@@ -11,7 +11,7 @@ Komendy budowania i codzienny przepływ pracy opisano w [`AGENTS.md`](../AGENTS.
 - [Warstwy](#warstwy) · [Zasady projektowe](#zasady-projektowe)
 - [`stats/` — potok statystyk](#stats--potok-statystyk)
 - [`sim/` — czas symulacji](#sim--czas-symulacji)
-- [`effects/` — wzmocnienia, osłabienia, aury](#effects--wzmocnienia-osłabienia-auras)
+- [`effects/` — wzmocnienia, osłabienia, aury](#effects--wzmocnienia-osłabienia-aury)
 - [`champions/` — wyznaczanie stanu jednostki](#champions--wyznaczanie-stanu-jednostki)
 - [`items/`](#items) · [`events/`](#events) · [`view/`](#view)
 - [Przepływ danych jednego kroku symulacji](#przepływ-danych-jednego-kroku-symulacji)
@@ -65,7 +65,7 @@ efektów uporządkować, więc jest skazany na iterowanie, aż liczby przestaną
 zmieniać; ten, który nie widzi, *kiedy* efekt się kończy, nie potrafi go
 odświeżyć, zdjąć ani pokazać timera wzmocnienia. Zadeklarowanie tego jako danych
 zwraca się natychmiast — patrz
-[Effects](#effects--wzmocnienia-osłabienia-auras).
+[Effects](#effects--wzmocnienia-osłabienia-aury).
 
 **2. Dokładne zamiast przybliżonego.** Czas jest całkowitoliczbowy, nie jest
 akumulacją sekund w `double`. Wyznaczanie statystyk to jeden przejście w

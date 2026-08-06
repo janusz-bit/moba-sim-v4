@@ -50,6 +50,8 @@ struct Until {
     std::function<bool(Tick now)> alive{};
 };
 
+/// One of Permanent, Timed, OneShot or Until — the whole vocabulary of how
+/// long an effect can live.
 using Lifetime = std::variant<Permanent, Timed, OneShot, Until>;
 
 /// True if `lifetime` is still alive at `now`. OneShot reports alive here; it

@@ -56,11 +56,12 @@ nix run .#docs                  # generate the API reference, print its path
 
 - [`docs/architecture.md`](docs/architecture.md) — the layers, the invariants,
   and the reasoning behind the non-obvious decisions.
-- **API reference** — generated from the `///` comments by Doxygen:
+- **API reference** — Sphinx + MyST + Breathe site generated from the `///`
+  comments; Doxygen runs only as the C++ parser (XML output):
 
   ```sh
   nix run .#docs                     # no toolchain needed
-  cmake --build build --target docs  # in a dev shell; build/docs/html/index.html
+  docs/build.sh                      # in a dev shell; build/docs/html/index.html
   ```
 
   Undocumented public API is a warning locally and an error in CI, so the

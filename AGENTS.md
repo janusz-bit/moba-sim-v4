@@ -175,31 +175,41 @@ in comments — keep that pattern when extending them.
 
 ## API documentation
 
-Doxygen renders the `///` comments into an HTML reference. Two ways in:
+Sphinx + MyST + Breathe render the site; Doxygen runs purely as the C++ parser (XML output
+only — its HTML/markdown renderer, and its bugs, are never used). Two ways in:
 
 ```sh
 nix run .#docs                                   # build + print the index path
-cmake --build build --target docs                # in a dev shell; output in build/docs/html
+docs/build.sh                                    # in a dev shell; output in build/docs/html
 ```
 
-The `docs` target only exists when Doxygen is installed, so a plain
-`cmake --build build` never depends on it; the dev shell provides `doxygen` and `graphviz`.
+The docs live outside CMake entirely, so a plain `cmake --build build` never depends on
+them; the dev shell provides `doxygen` and the docs python environment (sphinx, breathe,
+myst-parser, furo).
 
-`EXTRACT_ALL` is **off** on purpose. With it on, every undocumented entity is published as an
-empty stub and `WARN_IF_UNDOCUMENTED` goes quiet — the reference looks complete while saying
-nothing. Off, Doxygen's warning list is the list of public API still missing a `///`, which
-is what keeps the "public API carries `///` doc comments" convention below enforceable
-rather than aspirational.
+`docs/conf.py` uses the repo root as the Sphinx source dir (`root_doc = index`), so the
+root `index.md` is the landing page and `README.md`, `AGENTS.md` and the prose in `docs/`
+form one site whose relative links work exactly as on GitHub.
 
-`nix build .#docs` (and `nix flake check`) sets `MOBA_SIM_DOCS_WARNINGS_AS_ERRORS=ON`, so
-**adding an undocumented public member fails CI**. Locally it is only a warning, mirroring
-how `MOBA_SIM_WARNINGS_AS_ERRORS` treats compiler warnings. Document members inline with
+The API pages (`docs/api/<module>.md`) are lists of Breathe directives, one page per module:
+adding a new public type or free function means adding its directive to the matching page.
+`EXTRACT_ALL = YES` puts every public entity into the XML (the directives pick what to
+render); the `detail` namespace is excluded via `EXCLUDE_SYMBOLS`. Overloaded free functions
+need one directive per overload, spelled with the exact argument list from the XML.
+
+Doxygen's `WARN_IF_UNDOCUMENTED` is the enforcement: its warning list is the list of public
+API still missing a `///`, which is what keeps the "public API carries `///` doc comments"
+convention below enforceable rather than aspirational.
+
+`nix build .#docs` (and `nix flake check`) runs doxygen with
+`MOBA_SIM_DOCS_WARN_AS_ERROR=FAIL_ON_WARNINGS` and `sphinx-build -W`, so **adding an
+undocumented public member fails CI**. Locally it is only a warning, mirroring how
+`MOBA_SIM_WARNINGS_AS_ERRORS` treats compiler warnings. Document members inline with
 `///< ...` and types with a `///` block above them.
 
-`docs/architecture.md` and `AGENTS.md` are part of the Doxygen `INPUT`, so cross-links
-between them and the README resolve in the generated HTML. `MARKDOWN_ID_STYLE = GITHUB`
-makes heading anchors match GitHub's slugs, so `#section-name` links work in both places —
-do not "fix" those links into Doxygen `\ref` syntax, since that breaks them on GitHub.
+`myst_heading_slug_func = "github"` (with `myst_heading_anchors`) makes heading anchors
+match GitHub's slugs, so `#section-name` links in the prose work in both places — do not
+"fix" those links into Sphinx `:ref:` syntax, since that breaks them on GitHub.
 
 ## Conventions
 

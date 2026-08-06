@@ -22,6 +22,7 @@ class TickSpan {
   public:
     using Rep = std::int64_t; ///< Underlying integer representation.
 
+    /// A zero-length duration.
     constexpr TickSpan() = default;
     /// Constructs a span of `ticks`. Explicit, so a bare integer is never
     /// silently a duration.
@@ -65,6 +66,7 @@ class Tick {
   public:
     using Rep = std::int64_t; ///< Underlying integer representation.
 
+    /// The simulation start point, equal to `kSimulationStart`.
     constexpr Tick() = default;
     /// Constructs the point `value` ticks after the start. Explicit, so a bare
     /// integer is never silently a point in time.

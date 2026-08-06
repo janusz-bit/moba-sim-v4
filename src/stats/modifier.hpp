@@ -19,11 +19,12 @@ class StatPipeline;
 // Each bucket is a separate vector inside StatPipeline; the ModifierKind tag
 // tells StatPipeline which bucket to target.
 
-// Tags identifying which bucket a modifier belongs to.
+/// Tags identifying which bucket a modifier belongs to, i.e. which term of
+/// `sum(Base) * (1 + sum(Inc)) * product(1 + More)` it feeds.
 enum class ModifierKind {
-    Base,
-    Inc,
-    More,
+    Base, ///< Additive bucket: values are summed.
+    Inc,  ///< Additive-percentage bucket: summed, then added to 1.0.
+    More, ///< Multiplicative bucket: each value is an independent multiplier.
 };
 
 /// A single stat modification, independent of where it came from: items,
@@ -46,10 +47,14 @@ struct Modifier {
     return {stat, ModifierKind::Base, value, std::move(source)};
 }
 
+/// Like base_mod, but the value joins the Inc bucket: an additive percentage
+/// (`0.1` reads as +10%).
 [[nodiscard]] inline Modifier inc_mod(StatId stat, double value, std::string source = "") {
     return {stat, ModifierKind::Inc, value, std::move(source)};
 }
 
+/// Like base_mod, but the value becomes one More multiplier: `0.2` reads as
+/// "20% more", applied independently of every other multiplier.
 [[nodiscard]] inline Modifier more_mod(StatId stat, double value, std::string source = "") {
     return {stat, ModifierKind::More, value, std::move(source)};
 }

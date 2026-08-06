@@ -23,9 +23,10 @@ enum class ResourceType {
     Fury,
 };
 
+/// Whether auto-attacks land point-blank or from a distance.
 enum class RangeType {
-    Melee,
-    Ranged,
+    Melee,  ///< Attacks from point-blank range.
+    Ranged, ///< Attacks from a distance.
 };
 
 /// Champion base statistics in the LoL wiki format:

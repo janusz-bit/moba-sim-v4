@@ -16,6 +16,15 @@
     }:
     let
       pkg = self'.packages.default;
+
+      # Sphinx renders the prose (MyST) and the API reference (Breathe);
+      # Doxygen only parses the C++ into XML for Breathe to consume.
+      docs-python = pkgs.python3.withPackages (ps: [
+        ps.sphinx
+        ps.breathe
+        ps.myst-parser
+        ps.furo
+      ]);
     in
     {
       formatter = pkgs.nixfmt-tree;
@@ -55,55 +64,34 @@
         '';
       };
 
-      # Generated API reference. Separate from packages.default so building the
-      # simulator never pulls in doxygen + graphviz, and so warnings about
-      # undocumented public API fail this derivation rather than the build.
+      # Generated documentation site. Separate from packages.default so
+      # building the simulator never pulls in doxygen + sphinx, and so
+      # warnings about undocumented public API fail this derivation rather
+      # than the build.
       packages.docs = pkgs.stdenv.mkDerivation {
         pname = "moba-sim-docs";
         version = "0.1.0";
         src = ./..;
 
         nativeBuildInputs = [
-          pkgs.cmake
-          pkgs.ninja
           pkgs.doxygen
-          pkgs.graphviz
+          docs-python
         ];
-
-        # Nothing is compiled or linked here -- doxygen only parses headers --
-        # but the CMake configure step still runs find_package for the whole
-        # project, so SDL3 and Catch2 have to be present.
-        buildInputs = [
-          pkgs.catch2_3
-          pkgs.sdl3
-        ];
-
-        cmakeFlags = [
-          "-DMOBA_SIM_BUILD_DOCS=ON"
-          "-DMOBA_SIM_DOCS_WARNINGS_AS_ERRORS=ON"
-          # Tests are configured but never built; skip discovering them.
-          "-DBUILD_TESTING=OFF"
-        ];
-
-        # graphviz renders the diagrams and wants a writable font cache; the
-        # sandbox has no HOME, so point both at the build directory. Without
-        # this the log fills with Fontconfig errors that hide real warnings.
-        preBuild = ''
-          export HOME="$TMPDIR"
-          export XDG_CACHE_HOME="$TMPDIR/cache"
-          mkdir -p "$XDG_CACHE_HOME/fontconfig"
-        '';
 
         buildPhase = ''
           runHook preBuild
-          cmake --build . --target docs
+          export MOBA_SIM_ROOT="$PWD"
+          export MOBA_SIM_DOXYGEN_XML="$TMPDIR/doxygen-xml"
+          export MOBA_SIM_DOCS_WARN_AS_ERROR=FAIL_ON_WARNINGS
+          doxygen docs/doxygen-xml.conf
+          sphinx-build -b html -W -d "$TMPDIR/doctrees" -c docs . site
           runHook postBuild
         '';
 
         installPhase = ''
           runHook preInstall
           mkdir -p "$out/share/doc/moba-sim"
-          cp -r docs/html "$out/share/doc/moba-sim/html"
+          cp -r site "$out/share/doc/moba-sim/html"
           runHook postInstall
         '';
 
@@ -158,9 +146,9 @@
         shellHook = config.pre-commit.shellHook;
         packages = config.pre-commit.settings.enabledPackages ++ [
           pkgs.clang-tools
-          # `cmake --build build --target docs`
+          # `docs/build.sh`
           pkgs.doxygen
-          pkgs.graphviz
+          docs-python
         ];
       };
     };
